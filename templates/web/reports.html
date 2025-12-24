@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load humanize %}
+
+{% block page_title %}{% trans "Raporlar" %}{% endblock %}
+
+{% block content %}
+<style>
+/* Gradient Cards */
+.bg-gradient-success { background: linear-gradient(45deg, #10b981, #059669) !important; }
+.bg-gradient-danger { background: linear-gradient(45deg, #ef4444, #b91c1c) !important; }
+.bg-gradient-info { background: linear-gradient(45deg, #3b82f6, #1d4ed8) !important; }
+.bg-gradient-primary { background: linear-gradient(45deg, #6366f1, #4338ca) !important; }
+.bg-gradient-warning { background: linear-gradient(45deg, #f59e0b, #d97706) !important; }
+
+/* Stat Card */
+.card-stat {
+    border: none !important;
+    overflow: hidden;
+    position: relative;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s;
+}
+.card-stat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+.card-stat .text-white { color: #ffffff !important; }
+.card-stat .icon-box {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    opacity: 0.3;
+    transform: rotate(-10deg) scale(1.2);
+    color: white;
+}
+
+/* Modern Typography */
+.fs-7 { font-size: 0.8rem; }
+.ls-1 { letter-spacing: 1px; }
+
+/* Chart Card */
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+</style>
+
+<div class="container-fluid p-0">
+    <!-- Header Controls -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-3 mb-md-0 text-gray-800"><i class="fas fa-chart-line me-2 text-primary"></i>{% trans "Detaylı Raporlama" %}</h5>
+        
+        <div class="d-flex gap-2">
+             <button class="btn btn-primary-custom btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCardFilters">
+                <i class="fas fa-filter me-2"></i>{% trans "Filtrele" %}
+            </button>
+            <a href="{% url 'export-reports-csv' %}?{{ current_params }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">
+                <i class="fas fa-file-csv me-2"></i>{% trans "CSV İndir" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Collapsible Filter -->
+    <div class="collapse mb-4 {% if request.GET %}show{% endif %}" id="collapseCardFilters">
+        <div class="card card-custom border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label text-uppercase fs-7 text-muted fw-bold">{% trans "Date Range" %}</label>
+                        {{ filter.form.created_at }} 
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-uppercase fs-7 text-muted fw-bold">{% trans "Type" %}</label>
+                        {{ filter.form.transaction_type }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-uppercase fs-7 text-muted fw-bold">{% trans "Status" %}</label>
+                        {{ filter.form.status }}
+                    </div>
+                    {% if user.is_superadmin %}
+                    <div class="col-md-3">
+                        <label class="form-label text-uppercase fs-7 text-muted fw-bold">{% trans "SubDealer" %}</label>
+                        {{ filter.form.sub_dealer }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-search me-1"></i> Ara</button>
+                        <a href="{% url 'daily-report-page' %}" class="btn btn-light w-100 rounded-pill border"><i class="fas fa-eraser"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Stat Cards -->
+    <div class="row mb-4">
+        <!-- Deposits -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card card-stat bg-gradient-success h-100">
+                <div class="card-body p-4">
+                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Top. Yatırım</h6>
+                     <h2 class="mb-0 fw-bold text-white display-6">{{ total_deposit|default:0|floatformat:2|intcomma }} ₺</h2>
+                     <div class="icon-box">
+                        <i class="fas fa-arrow-trend-up fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Withdrawals -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card card-stat bg-gradient-danger h-100">
+                <div class="card-body p-4">
+                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Top. Çekim</h6>
+                     <h2 class="mb-0 fw-bold text-white display-6">{{ total_withdraw|default:0|floatformat:2|intcomma }} ₺</h2>
+                     <div class="icon-box">
+                        <i class="fas fa-arrow-trend-down fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Net Flow -->
+        <div class="col-xl-3 col-md-6 mb-4">
+             <div class="card card-stat bg-gradient-info h-100">
+                <div class="card-body p-4">
+                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Net Akış</h6>
+                     <h2 class="mb-0 fw-bold text-white display-6">{{ net_flow|default:0|floatformat:2|intcomma }} ₺</h2>
+                     <div class="icon-box">
+                        <i class="fas fa-balance-scale fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commission -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card card-stat bg-gradient-warning h-100">
+                <div class="card-body p-4">
+                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Tahmini Komisyon</h6>
+                     <h2 class="mb-0 fw-bold text-white display-6">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</h2>
+                     <div class="icon-box">
+                        <i class="fas fa-percentage fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row: Table Only -->
+    <div class="row">
+        <!-- Transactions Table -->
+        <div class="col-12 mb-4">
+            <div class="card card-custom h-100">
+                <div class="card-header-custom border-bottom pb-3 mb-3">
+                    <h6 class="fw-bold m-0 text-primary">{% trans "İşlem Dökümü" %}</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                        <table class="table-modern w-100 align-middle">
+                            <thead class="sticky-top bg-white">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>{% trans "Tarih" %}</th>
+                                    <th>{% trans "Bayi" %}</th>
+                                    <th>{% trans "Tip" %}</th>
+                                    <th>{% trans "Durum" %}</th>
+                                    <th class="text-end">{% trans "Tutar" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tx in transactions %}
+                                <tr>
+                                    <td><span class="text-muted small">#{{ tx.id }}</span></td>
+                                    <td>
+                                        <div class="fw-medium">{{ tx.created_at|date:"d M" }}</div>
+                                        <small class="text-muted">{{ tx.created_at|date:"H:i" }}</small>
+                                    </td>
+                                    <td class="fw-bold text-primary">{{ tx.sub_dealer.user.username }}</td>
+                                    <td>
+                                        {% if tx.transaction_type == 'DEPOSIT' %}
+                                        <span class="badge badge-soft-success">YATIRIM</span>
+                                        {% elif tx.transaction_type == 'WITHDRAW' %}
+                                        <span class="badge badge-soft-danger">ÇEKİM</span>
+                                        {% else %}
+                                        <span class="badge badge-soft-primary">{{ tx.transaction_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tx.status == 'APPROVED' %}
+                                        <i class="fas fa-check-circle text-success" title="Onaylandı"></i>
+                                        {% elif tx.status == 'PENDING' %}
+                                        <i class="fas fa-clock text-warning" title="Bekliyor"></i>
+                                        {% elif tx.status == 'REJECTED' %}
+                                        <i class="fas fa-times-circle text-danger" title="Reddedildi"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end fw-bold font-monospace fs-6">
+                                        {{ tx.amount|floatformat:2|intcomma }} ₺
+                                        {% if user.is_superadmin and tx.status == 'REJECTED' %}
+                                        <form action="{% url 'transaction-action' tx.id 'requeue' %}" method="POST" class="d-inline ms-2" onsubmit="return confirm('Bu işlemi tekrar bekleyenlere almak istiyor musunuz?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-light border rounded-circle" style="width: 24px; height: 24px; padding: 0;" title="Tekrar İşleme Al">
+                                                <i class="fas fa-undo fa-xs text-warning"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <div class="text-muted">
+                                            <i class="fas fa-inbox fa-2x mb-2 opacity-25"></i>
+                                            <p class="mb-0">Veri bulunamadı.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart functionality removed from view, keeping script tag if needed for other things or removing it entirely -->
+{% endblock %}

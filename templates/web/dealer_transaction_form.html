@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary shadow-lg">
+                <div class="card-header border-secondary">
+                    <h4 class="mb-0"><i class="fas fa-edit text-warning me-2"></i>Miktar Düzeltme</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">İşlem #{{ object.id }} için miktar güncellemesi yapıyorsunuz.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-2"></i>Güncelle ve Kaydet
+                            </button>
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">İptal</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

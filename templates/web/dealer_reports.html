@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h3 text-theme-primary">Raporlar <small class="text-muted fs-6">Finansal Analiz</small></h2>
+        </div>
+    </div>
+
+    <!-- Glass Filter Bar -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-glass-card shadow-lg">
+                <form method="GET" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Tarih Aralığı</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="date" name="date_start" class="form-control" value="{{ request.GET.date_start }}">
+                            <span class="input-group-text p-1"><i class="fas fa-arrow-right x-small"></i></span>
+                            <input type="date" name="date_end" class="form-control" value="{{ request.GET.date_end }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">İşlem Tipi</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-exchange-alt"></i></span>
+                            <select name="type" class="form-select">
+                                <option value="ALL">Tümü</option>
+                                <option value="DEPOSIT" {% if request.GET.type == 'DEPOSIT' %}selected{% endif %}>Yatırım</option>
+                                <option value="WITHDRAW" {% if request.GET.type == 'WITHDRAW' %}selected{% endif %}>Çekim</option>
+                                <option value="MANUAL_CREDIT" {% if request.GET.type == 'MANUAL_CREDIT' %}selected{% endif %}>Manuel Ekleme</option>
+                                <option value="MANUAL_DEBIT" {% if request.GET.type == 'MANUAL_DEBIT' %}selected{% endif %}>Manuel Kesinti</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Durum</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <select name="status" class="form-select">
+                                <option value="ALL">Tümü</option>
+                                <option value="APPROVED" {% if request.GET.status == 'APPROVED' %}selected{% endif %}>Onaylı</option>
+                                <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>Reddedildi</option>
+                                <option value="PENDING" {% if request.GET.status == 'PENDING' %}selected{% endif %}>Bekliyor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                        <button type="submit" class="btn btn-filter-gradient w-100 py-2">
+                            <i class="fas fa-search me-2"></i>ANALİZ ET
+                        </button>
+                        <a href="?" class="btn btn-soft-light border border-white-50 px-3 d-flex align-items-center" title="Temizle">
+                            <i class="fas fa-redo-alt text-white"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards (4 Columns) -->
+    <div class="row mb-4 g-3">
+        <!-- Period Net Balance -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-custom border-start border-5 border-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1"> Net Bakiye</div>
+                    <div class="h3 mb-0 font-weight-bold text-theme-primary">{{ period_net_balance|floatformat:2|intcomma }} ₺</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Deposits (GROSS) -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-custom border-start border-5 border-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Toplam Yatırım (Brüt)</div>
+                    <div class="h3 mb-0 font-weight-bold text-theme-primary">+{{ total_deposits_gross|floatformat:2|intcomma }} ₺</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Withdrawals -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-custom border-start border-5 border-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Toplam Çekim</div>
+                    <div class="h3 mb-0 font-weight-bold text-theme-primary">-{{ total_withdrawals|floatformat:2|intcomma }} ₺</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Commission -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-custom border-start border-5 border-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Toplam Komisyon</div>
+                    <div class="h3 mb-0 font-weight-bold text-theme-primary">{{ total_commission|floatformat:2|intcomma }} ₺</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Transactions Table -->
+    <div class="card card-custom shadow-sm border-0">
+        <div class="card-header-custom border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-history me-2"></i>İşlem Detayları</h6>
+            <span class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-medium">{{ transactions|length }} Kayıt</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table-modern w-100 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Tarih</th>
+                            <th>İşlem Tipi</th>
+                            <th>Miktar</th>
+                            <th>Komisyon</th>
+                            <th>Net Miktar</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="small fw-medium text-muted">{{ tx.created_at|date:"d.m.Y" }}</div>
+                                <div class="small text-primary fw-bold font-monospace">{{ tx.created_at|date:"H:i:s" }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-theme-primary border">
+                                    {{ tx.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td class="fw-bold {% if tx.transaction_type == 'DEPOSIT' or tx.transaction_type == 'MANUAL_CREDIT' %}text-success{% else %}text-danger{% endif %} font-monospace">
+                                {{ tx.amount|floatformat:2|intcomma }} ₺
+                            </td>
+                            <td>
+                                {% if tx.commission_amount > 0 %}
+                                <div class="text-warning small fw-bold font-monospace">-{{ tx.commission_amount|floatformat:2|intcomma }} ₺</div>
+                                {% else %}
+                                <span class="text-muted small">---</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold text-theme-primary font-monospace">
+                                {{ tx.net_amount|floatformat:2|intcomma }} ₺
+                            </td>
+                            <td>
+                                {% if tx.status == 'APPROVED' %}
+                                <span class="badge badge-soft-success">Onaylandı</span>
+                                {% elif tx.status == 'PENDING' %}
+                                <span class="badge badge-soft-warning">Bekliyor</span>
+                                {% else %}
+                                <span class="badge badge-soft-danger">Reddedildi</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">Arama kriterlerine uygun işlem bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

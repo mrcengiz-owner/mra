@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load i18n %}
+
+{% block page_title %}Panelim{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Total Deposit (Green Gradient) -->
+    <div class="col-md-3">
+        <div class="card card-stat h-100" style="background: linear-gradient(135deg, #059669 0%, #34d399 100%);">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="text-white">
+                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Yatırım (Brüt)</h6>
+                    <h2 class="fw-bold mb-0 display-6">{{ total_deposit|default:0|floatformat:2|intcomma }} ₺</h2>
+                </div>
+                <div class="icon-box-static text-white opacity-25">
+                    <i class="fas fa-arrow-down fa-3x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Withdrawal (Red Gradient) -->
+    <div class="col-md-3">
+        <div class="card card-stat h-100" style="background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="text-white">
+                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Çekim</h6>
+                    <h2 class="fw-bold mb-0 display-6">{{ total_withdraw|default:0|floatformat:2|intcomma }} ₺</h2>
+                </div>
+                <div class="icon-box-static text-white opacity-25">
+                    <i class="fas fa-arrow-up fa-3x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Commission (Orange/Warning Gradient) -->
+    <div class="col-md-3">
+        <div class="card card-stat h-100" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="text-white">
+                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Komisyon</h6>
+                    <h2 class="fw-bold mb-0 display-6">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</h2>
+                </div>
+                <div class="icon-box-static text-white opacity-25">
+                    <i class="fas fa-percent fa-3x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Balance (Blue Gradient) -->
+    <div class="col-md-3">
+        <div class="card card-stat h-100" style="background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="text-white">
+                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Net Değişim</h6>
+                    <h2 class="fw-bold mb-0 display-6">{{ period_net|default:0|floatformat:2|intcomma }} ₺</h2>
+                </div>
+                <div class="icon-box-static text-white opacity-25">
+                    <i class="fas fa-wallet fa-3x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Limit Warning -->
+{% if percent_used > 90 %}
+<div class="alert alert-danger d-flex align-items-center border-0 shadow-sm rounded-3 mb-4" role="alert">
+    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+    <div>
+        <h5 class="alert-heading fw-bold">Limit Uyarısı!</h5>
+        <p class="mb-0">Net Kasa Limitine yaklaşıyorsunuz! Kullanım: <strong>%{{ percent_used|floatformat:1 }}</strong>. Lütfen yöneticinizle iletişime geçin.</p>
+    </div>
+</div>
+{% endif %}
+
+    <!-- Recent Transactions -->
+    <div class="col-lg-12 mb-4">
+        <div class="card card-custom h-100">
+            <div class="card-header-custom border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Son İşlemler</h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-soft-primary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Tümünü Gör
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">
+                        <li><a class="dropdown-item" href="{% url 'dealer-deposits' %}">Tüm Yatırımlar</a></li>
+                        <li><a class="dropdown-item" href="{% url 'dealer-withdrawals' %}">Tüm Çekimler</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table-modern w-100 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tip</th>
+                                <th>Miktar</th>
+                                <th>Banka / Bilgi</th>
+                                <th>Durum</th>
+                                <th class="text-end">Zaman</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in recent_transactions %}
+                            <tr>
+                                <td>
+                                    {% if tx.transaction_type == 'DEPOSIT' %}
+                                    <span class="badge bg-success-soft text-success"><i class="fas fa-arrow-down me-1"></i> Yatırım</span>
+                                    {% else %}
+                                    <span class="badge bg-danger-soft text-danger"><i class="fas fa-arrow-up me-1"></i> Çekim</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold text-theme-primary">{{ tx.amount|floatformat:2|intcomma }} ₺</td>
+                                <td>
+                                    {% if tx.target_bank %}
+                                        <div class="small fw-medium">{{ tx.target_bank.bank_name }}</div>
+                                        <div class="x-small text-muted">{{ tx.target_bank.iban|truncatechars:15 }}</div>
+                                    {% elif tx.target_iban %}
+                                        <div class="small fw-medium">{{ tx.target_name }}</div>
+                                        <div class="x-small text-muted">{{ tx.target_iban|truncatechars:15 }}</div>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tx.status == 'APPROVED' %}
+                                    <span class="badge bg-success text-white">Onaylandı</span>
+                                    {% elif tx.status == 'REJECTED' %}
+                                    <span class="badge bg-danger text-white">Reddedildi</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">Bekliyor</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end text-muted small">{{ tx.created_at|date:"d M H:i" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">Henüz işlem bulunmuyor.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-stat { border-radius: 16px; border: none; overflow: hidden; transition: transform 0.2s; }
+    .card-stat:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    .text-white-50 { color: rgba(255,255,255,0.7) !important; }
+</style>
+{% endblock %}

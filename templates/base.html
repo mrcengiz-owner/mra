@@ -1,0 +1,612 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PayGate{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* 1. AKILLI RENK PALETİ */
+        :root, [data-bs-theme="light"] {
+            /* LIGHT MODE (Varsayılan) */
+            --bg-body: #f4f7fe;       /* Çok açık gri/mavi */
+            --bg-card: #ffffff;       /* Tam Beyaz */
+            --text-main: #2b3674;     /* Koyu Lacivert (Okunabilirlik için) */
+            --text-muted: #a3aed0;    /* Gri */
+            --border-color: #e0e5f2;
+            --card-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
+            --input-bg: #ffffff;
+            
+            /* Custom Gradients (Kept for Stat Cards) */
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --danger-gradient: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        }
+
+        [data-bs-theme="dark"] {
+            /* DARK MODE */
+            --bg-body: #0b1437;       /* Derin Lacivert */
+            --bg-card: #111c44;       /* Kart Laciverti */
+            --text-main: #ffffff;     /* Tam Beyaz */
+            --text-muted: #8f9bba;    /* Açık Mavi/Gri */
+            --border-color: rgba(255, 255, 255, 0.1);
+            --card-shadow: none;
+            --input-bg: #111c44;
+        }
+
+        /* 2. GLOBAL RESET & Element Styles */
+        body {
+            background-color: var(--bg-body) !important;
+            color: var(--text-main) !important;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+            margin: 0;
+        }
+
+        .card, .card-custom {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+            color: var(--text-main) !important;
+        }
+        
+        /* Stats Cards specific overrides to keep white text on gradients */
+        .card-custom.text-white {
+            color: #fff !important; 
+        }
+        .card-custom.text-white h6, .card-custom.text-white h2 {
+            color: #fff !important;
+        }
+
+        /* Tablolar */
+        .table, .table-modern, .table-custom {
+            color: var(--text-main) !important;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .table thead th, .table-modern thead th, .table-custom thead th {
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            padding: 1rem;
+            font-weight: 600;
+        }
+        .table td, .table-modern td, .table-custom td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem !important; /* Ferahlık için */
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover, .table-modern tbody tr:hover, .table-custom tbody tr:hover {
+            background-color: rgba(128, 128, 128, 0.1) !important; /* Hem dark hem light'ta çalışır */
+            color: var(--text-main);
+        }
+
+        /* Form Inputları (Datepicker, Select vb.) */
+        .form-control, .form-select {
+            background-color: var(--input-bg) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-main) !important;
+            border-radius: 10px;
+            padding: 0.6rem 1rem;
+        }
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+            border-color: #4299e1 !important;
+        }
+
+        /* LAYOUT (Sidebar & Navbar) ADAPTATION */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-card); /* Sidebar typically matches card or body bg */
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1020;
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .main-content {
+            margin-left: 280px;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - 280px);
+        }
+        .navbar-glass {
+            height: 80px;
+            background-color: var(--bg-card); /* User layout uses solid colors mostly */
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1010;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        /* Sidebar Menu links */
+        .sidebar-menu { list-style: none; padding: 1rem 0; margin: 0; }
+        .sidebar-menu li a {
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-right: 3px solid transparent;
+        }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active {
+            color: #4318FF; /* High contrast blue */
+            background-color: rgba(67, 24, 255, 0.06);
+        }
+        .sidebar-menu li a i { width: 24px; margin-right: 12px; font-size: 1.1rem; }
+        
+        [data-bs-theme="dark"] .sidebar-menu li a:hover, 
+        [data-bs-theme="dark"] .sidebar-menu li a.active {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Utilities */
+        .rounded-circle-avatar {
+             width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+             background: var(--primary-gradient);
+             color: white;
+             display: flex; align-items: center; justify-content: center;
+        }
+        .dropdown-menu {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .dropdown-item { color: var(--text-main); }
+        .dropdown-item:hover { background-color: var(--bg-body); color: var(--text-main); }
+
+        /* Badge Soft */
+        .badge-soft-success { background-color: rgba(16, 185, 129, 0.15); color: #10b981; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
+        .badge-soft-danger { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
+        .badge-soft-warning { background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
+        .badge-soft-primary { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
+
+        /* Soft Buttons */
+        .btn-soft-success { background-color: rgba(16, 185, 129, 0.12); color: #10b981; border: none; border-radius: 30px; transition: all 0.2s; }
+        .btn-soft-success:hover { background-color: #10b981; color: #fff; transform: translateY(-1px); }
+        
+        .btn-soft-danger { background-color: rgba(239, 68, 68, 0.12); color: #ef4444; border: none; border-radius: 30px; transition: all 0.2s; }
+        .btn-soft-danger:hover { background-color: #ef4444; color: #fff; transform: translateY(-1px); }
+        
+        .btn-soft-warning { background-color: rgba(245, 158, 11, 0.12); color: #f59e0b; border: none; border-radius: 30px; transition: all 0.2s; }
+        .btn-soft-warning:hover { background-color: #f59e0b; color: #fff; transform: translateY(-1px); }
+
+        .btn-soft-warning:hover { background-color: #f59e0b; color: #fff; transform: translateY(-1px); }
+
+        /* Filter Glass Card */
+        .filter-glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: #fff;
+        }
+        .filter-glass-card .form-label { color: rgba(255,255,255,0.7); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group-glass {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px !important;
+            overflow: hidden;
+        }
+        .input-group-glass .form-control, .input-group-glass .form-select {
+            background: transparent !important;
+            border: none !important;
+            color: #fff !important;
+            font-size: 0.9rem;
+        }
+        .input-group-glass .form-control::placeholder { color: rgba(255,255,255,0.4); }
+        .input-group-glass .input-group-text {
+            background: transparent !important;
+            border: none;
+            color: rgba(255,255,255,0.5);
+        }
+        .btn-filter-gradient {
+            background: linear-gradient(135deg, #4318FF 0%, #6366f1 100%);
+            border: none;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(67, 24, 255, 0.3);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .btn-filter-gradient:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67, 24, 255, 0.4); color: white; }
+
+        .btn-filter-gradient:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67, 24, 255, 0.4); color: white; }
+
+        /* Theme Compatibility Helpers */
+        .text-theme-primary { color: var(--text-primary) !important; }
+        .text-theme-secondary { color: var(--text-secondary) !important; }
+        
+        /* Force color for specific elements that often break in dark mode */
+        [data-bs-theme="dark"] .text-gray-800, 
+        [data-bs-theme="dark"] .text-dark,
+        [data-bs-theme="dark"] .card-title {
+            color: #fff !important;
+        }
+
+        .filter-glass-card select option {
+            background: #1e293b; /* Ensure options are readable in glass dropdown */
+            color: #fff;
+        }
+
+        [data-bs-theme="dark"] .sidebar-submenu {
+            background-color: rgba(0,0,0,0.15); /* Darker shade for dark mode submenu */
+        }
+        
+        .submenu-link {
+            color: var(--text-secondary);
+            font-size: 0.85rem !important;
+            padding: 0.6rem 1.5rem 0.6rem 3.5rem !important; /* Indented padding */
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .submenu-link:hover, .submenu-link.active {
+            color: var(--text-primary);
+        }
+        
+        .submenu-link.active {
+            font-weight: 600;
+        }
+        
+        .submenu-link.active::before {
+            content: '';
+            position: absolute;
+            left: 2.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: #4318FF;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.2);
+        }
+        
+        .submenu-bullet {
+            font-size: 0.35rem;
+            margin-right: 12px;
+            opacity: 0.5;
+            width: auto !important; /* Override generic sidebar i width */
+        }
+        
+        [data-bs-theme="dark"] .submenu-link.active::before {
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 991px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+            .main-content { margin-left: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    {% if user.is_authenticated %}
+    <nav class="sidebar" id="sidebar">
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <i class="fas fa-layer-group me-3 text-primary"></i> <span style="background: var(--primary-gradient); -webkit-background-clip: text; color: transparent;">PayGate</span>
+        </div>
+        
+        <!-- Menu -->
+        <div style="flex: 1; overflow-y: auto;">
+            {% include "includes/sidebar.html" %}
+        </div>
+        
+        <!-- Sidebar Footer -->
+        <div class="px-4 py-3 border-top border-1" style="border-color: var(--border-color) !important;">
+            <div class="d-flex align-items-center">
+                 <div class="rounded-circle-avatar me-3" style="width: 36px; height: 36px; font-size: 0.9rem;">
+                     {{ user.username|make_list|first|upper }}
+                 </div>
+                 <div style="line-height: 1.25;">
+                     <div class="fw-bold fs-6">{{ user.username }}</div>
+                     <span class="badge bg-soft-primary px-2 py-0 align-middle" style="font-size: 0.65rem;">{{ user.role }}</span>
+                 </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Main Content Wrapper -->
+    <div class="main-content" id="contentWrapper">
+        
+        <!-- Navbar -->
+        <header class="navbar-glass">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link text-muted me-3 d-lg-none p-0" id="sidebarToggle">
+                    <i class="fas fa-bars fa-lg"></i>
+                </button>
+                <h5 class="mb-0 fw-bold">{% block page_title %}{% endblock %}</h5>
+            </div>
+            
+            <div class="d-flex align-items-center gap-4">
+                <!-- Theme Switch -->
+                <div class="d-flex align-items-center" title="Dark Mode" style="cursor: pointer;" id="toggleThemeContainer">
+                     <i class="fas fa-sun text-warning me-2" id="sunIcon"></i>
+                     <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="darkModeSwitch" style="cursor: pointer; transform: scale(1.2);">
+                    </div>
+                    <i class="fas fa-moon text-muted ms-2" id="moonIcon"></i>
+                </div>
+
+                {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle hide-arrow" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="rounded-circle-avatar shadow-sm border border-2 border-white">
+                             <i class="fas fa-user"></i>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-3" style="min-width: 200px;">
+                        <li><h6 class="dropdown-header text-uppercase small text-muted px-4 mt-2">Hesap Yönetimi</h6></li>
+                        <li><a class="dropdown-item px-4 py-2" href="#"><i class="fas fa-user-circle me-2 text-primary"></i> Profili Düzenle</a></li>
+                        <li><hr class="dropdown-divider my-2" style="border-color: var(--border-color);"></li>
+                        <li>
+                            <form action="{% url 'logout' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item px-4 py-2 text-danger fw-medium"><i class="fas fa-sign-out-alt me-2"></i> Çıkış Yap</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Dynamic Content -->
+        <main class="p-4">
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} border-0 shadow-sm d-flex align-items-center rounded-3 p-3" role="alert" style="background-color: var(--card-bg); border-left: 4px solid {% if message.tags == 'success' %}#10b981{% else %}#ef4444{% endif %};">
+                    <div class="me-3">
+                         {% if message.tags == 'success' %} 
+                            <div class="stats-icon-wrapper bg-soft-success text-success" style="width: 32px; height: 32px;"><i class="fas fa-check"></i></div>
+                         {% else %}
+                            <div class="stats-icon-wrapper bg-soft-danger text-danger" style="width: 32px; height: 32px;"><i class="fas fa-exclamation"></i></div>
+                         {% endif %}
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ message }}</div>
+                    </div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // Theme Logic
+        const switchBtn = document.getElementById('darkModeSwitch');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+        const htmlElement = document.documentElement;
+        
+        function updateIcons(isDark) {
+            if (isDark) {
+                sunIcon.classList.add('text-muted');
+                sunIcon.classList.remove('text-warning');
+                moonIcon.classList.add('text-white');
+                moonIcon.classList.remove('text-muted');
+            } else {
+                sunIcon.classList.add('text-warning');
+                sunIcon.classList.remove('text-muted');
+                moonIcon.classList.add('text-muted');
+                moonIcon.classList.remove('text-white');
+            }
+        }
+
+        // Load preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-bs-theme', savedTheme);
+        
+        if (savedTheme === 'dark') {
+            if(switchBtn) switchBtn.checked = true;
+            updateIcons(true);
+        } else {
+            updateIcons(false);
+        }
+        
+        // Toggle
+        if(switchBtn) {
+            switchBtn.addEventListener('change', () => {
+                if(switchBtn.checked) {
+                    htmlElement.setAttribute('data-bs-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    updateIcons(true);
+                } else {
+                    htmlElement.setAttribute('data-bs-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    updateIcons(false);
+                }
+            });
+        }
+        
+        // Sidebar Mobile
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        if(toggleBtn && sidebar) {
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+            });
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+
+    <!-- Pusher & SweetAlert2 -->
+    <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        {% if user.is_authenticated %}
+        // Audio Notification Context
+        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+        // Initialize Pusher
+        const pusher = new Pusher('{{ PUSHER_KEY }}', {
+            cluster: '{{ PUSHER_CLUSTER }}'
+        });
+
+        // Determine Channel
+        {% if user.is_superadmin %}
+            const channelName = 'admin-channel';
+        {% else %}
+            const channelName = 'dealer-{{ user.id }}';
+        {% endif %}
+        
+        console.log('Subscribing to Pusher channel:', channelName);
+        const channel = pusher.subscribe(channelName);
+
+        // Listen for new transactions
+        channel.bind('new-transaction', function(data) {
+            console.log('Real-time notification received:', data);
+            
+            // Play Sound
+            notificationSound.play().catch(e => console.warn("Sound blocked by browser policy. Interaction needed."));
+
+            // Show SweetAlert2 Toast
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 6000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            Toast.fire({
+                icon: data.type === 'DEPOSIT' ? 'success' : 'warning',
+                title: data.message,
+                text: 'Miktar: ' + data.amount + ' TL',
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674'
+            });
+        });
+        {% endif %}
+
+        // Reject Transaction with Reason (SweetAlert2)
+        function rejectTransaction(id, url) {
+            Swal.fire({
+                title: 'İşlemi Reddet',
+                input: 'textarea',
+                inputLabel: 'Reddetme Sebebi',
+                inputPlaceholder: 'İsim uyuşmazlığı, hatalı IBAN vb...',
+                inputAttributes: {
+                    'aria-label': 'Ret sebebini giriniz'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Reddet',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'İptal',
+                showLoaderOnConfirm: true,
+                padding: '2rem',
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674',
+                preConfirm: (reason) => {
+                    if (!reason) {
+                        Swal.showValidationMessage('Lütfen bir sebep giriniz!')
+                    } else {
+                        const formData = new FormData();
+                        formData.append('reason', reason);
+                        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                        return fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                            body: formData
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(err => { throw new Error(err.message || response.statusText) });
+                            }
+                            return response.json()
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`İşlem başarısız: ${error}`)
+                        })
+                    }
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Reddedildi!',
+                        text: result.value.message || 'İşlem başarıyla reddedildi.',
+                        background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
+                        color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674'
+                    }).then(() => location.reload());
+                }
+            })
+        }
+    </script>
+</body>
+</html>

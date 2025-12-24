@@ -1,0 +1,94 @@
+<ul class="sidebar-menu">
+    <li class="menu-header small text-uppercase text-muted px-4 py-2 mt-2" style="font-size: 0.75rem; letter-spacing: 1px;">Menü</li>
+
+    {% if user.is_superadmin %}
+    <!-- Admin Links -->
+    <li>
+        <a href="{% url 'admin-dashboard' %}" class="{% if '/admin-dashboard' in request.path %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i> <span>Panel</span>
+        </a>
+    </li>
+
+    <li class="menu-header small text-uppercase text-muted px-4 py-2 mt-3" style="font-size: 0.75rem; letter-spacing: 1px;">Finans</li>
+    
+    <li>
+        <a href="{% url 'deposits-list' %}" class="{% if '/yatirimlar' in request.path %}active{% endif %}">
+            <i class="fas fa-arrow-down"></i> <span>Yatırımlar</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'withdrawal-queue' %}" class="{% if '/cekimler' in request.path %}active{% endif %}">
+            <i class="fas fa-arrow-up"></i> <span>Çekimler</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'admin-withdrawal-pool' %}" class="{% if '/withdrawal-pool' in request.path %}active{% endif %}">
+            <i class="fas fa-layer-group"></i> <span>Çekim Havuzu</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'manual-adjustment' %}" class="{% if 'manual' in request.path %}active{% endif %}">
+            <i class="fas fa-sliders-h"></i> <span>Manuel Düzeltme</span>
+        </a>
+    </li>
+
+    <li class="menu-header small text-uppercase text-muted px-4 py-2 mt-3" style="font-size: 0.75rem; letter-spacing: 1px;">Yönetici Ayarları</li>
+
+    <li>
+        <a href="{% url 'global-settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
+            <i class="fas fa-cogs"></i> <span>Genel Ayarlar</span>
+        </a>
+    </li>
+    <li>
+        <a href="#reportsSubmenu" data-bs-toggle="collapse" class="d-flex justify-content-between align-items-center {% if 'reports' in request.path %}active{% endif %}" role="button" aria-expanded="{% if 'reports' in request.path %}true{% else %}false{% endif %}">
+            <span><i class="fas fa-chart-pie"></i> Raporlar</span>
+            <i class="fas fa-chevron-down fa-xs transition-icon"></i>
+        </a>
+        <ul class="collapse list-unstyled sidebar-submenu {% if 'reports' in request.path %}show{% endif %}" id="reportsSubmenu">
+            <li>
+                <a href="{% url 'daily-report-page' %}" class="submenu-link {% if request.path == '/web/reports/' %}active{% endif %}">
+                    <i class="fas fa-circle submenu-bullet"></i> Genel Özet
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'dealer-report-page' %}" class="submenu-link {% if request.path == '/web/reports/dealer/' %}active{% endif %}">
+                    <i class="fas fa-circle submenu-bullet"></i> Bayi Bazlı Rapor
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'commission-report-page' %}" class="submenu-link {% if request.path == '/web/reports/commission/' %}active{% endif %}">
+                    <i class="fas fa-circle submenu-bullet"></i> Komisyon Raporları
+                </a>
+            </li>
+        </ul>
+    </li>
+
+    {% else %}
+    <!-- Dealer Links -->
+    <li>
+        <a href="{% url 'dealer-dashboard' %}" class="{% if '/dealer/dashboard' in request.path %}active{% endif %}">
+            <i class="fas fa-home"></i> <span>Panel</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'dealer-deposits' %}" class="{% if '/dealer/deposits' in request.path %}active{% endif %}">
+            <i class="fas fa-arrow-down"></i> <span>Yatırımlarım</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'dealer-withdrawals' %}" class="{% if '/dealer/withdrawals' in request.path %}active{% endif %}">
+            <i class="fas fa-arrow-up"></i> <span>Çekimlerim</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'dealer-banks' %}" class="{% if '/bank-accounts' in request.path %}active{% endif %}">
+            <i class="fas fa-university"></i> <span>Banka Hesaplarım</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'dealer-reports' %}" class="{% if '/dealer/reports' in request.path %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> <span>Raporlar</span>
+        </a>
+    </li>
+    {% endif %}
+</ul>

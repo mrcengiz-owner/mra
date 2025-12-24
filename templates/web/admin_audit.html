@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 mb-1 text-theme-primary">Sistem Denetim Kayıtları (Audit Log)</h2>
+            <p class="text-muted small mb-0">Sistemdeki tüm kritik hareketlerin kronolojik dökümü.</p>
+        </div>
+        <div class="badge bg-danger-soft text-danger px-3 py-2 border border-danger-subtle">
+            <i class="fas fa-shield-alt me-2"></i>Sadece SuperAdmin
+        </div>
+    </div>
+
+    <div class="card card-custom border-0 shadow-sm overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table-modern w-100 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Kullanıcı</th>
+                            <th>İşlem</th>
+                            <th>Modül / Nesne</th>
+                            <th>Detaylar</th>
+                            <th>IP Adresi</th>
+                            <th>Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>
+                                {% if log.user %}
+                                    <div class="fw-bold text-primary">{{ log.user.username|upper }}</div>
+                                    <div class="x-small text-muted">{{ log.user.get_role_display }}</div>
+                                {% else %}
+                                    <span class="text-muted italic">Sistem / Anonim</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if 'REJECT' in log.action or 'DELETE' in log.action %}bg-danger-soft text-danger{% elif 'APPROVE' in log.action or 'PAID' in log.action %}bg-success-soft text-success{% else %}bg-primary-soft text-primary{% endif %} px-2">
+                                    {{ log.action }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if log.target_model %}
+                                    <div class="small fw-medium">{{ log.target_model }}</div>
+                                    <div class="x-small text-muted">ID: #{{ log.target_object_id }}</div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="details-json-box small bg-light p-2 rounded border" style="max-width: 300px; max-height: 100px; overflow-y: auto;">
+                                    <pre class="mb-0 x-small">{{ log.details|json_script:"details"|truncatechars:200 }}</pre>
+                                    <small class="x-small text-muted" title="{{ log.details }}">Tamamını Gör...</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-bold">{{ log.ip_address|default:"---" }}</div>
+                                <div class="x-small text-muted truncate-text" style="max-width: 150px;" title="{{ log.user_agent }}">
+                                    {{ log.user_agent }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-bold">{{ log.created_at|date:"d.m.Y" }}</div>
+                                <div class="small text-muted">{{ log.created_at|date:"H:i:s" }}</div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-history fa-3x mb-3 opacity-25"></i>
+                                <p>Henüz bir denetim kaydı bulunmuyor.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .bg-primary-soft { background-color: rgba(67, 24, 255, 0.1); color: #4318FF; }
+    .bg-success-soft { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .bg-danger-soft { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    
+    .x-small { font-size: 0.75rem; }
+    .truncate-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .details-json-box pre {
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}

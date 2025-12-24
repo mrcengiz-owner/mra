@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="h3 text-theme-primary">Çekim Havuzu <small class="text-muted fs-6">(Atama Bekleyenler)</small></h2>
+            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold shadow-sm">
+                <i class="fas fa-layer-group me-2"></i>{{ transactions|length }} İşlem Havuzda
+            </span>
+        </div>
+    </div>
+
+    <!-- Pool Table -->
+    <div class="card card-custom border-0 shadow-lg">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table-modern w-100 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>MİKTAR</th>
+                            <th>ALICI BİLGİLERİ</th>
+                            <th>TARİH</th>
+                            <th class="text-end pe-4">İŞLEMLER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="ps-4"><span class="text-muted fw-bold">#{{ tx.id }}</span></td>
+                            <td>
+                                <div class="fw-bold text-danger fs-5">{{ tx.amount|floatformat:2|intcomma }} ₺</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-theme-primary">{{ tx.target_name|upper }}</div>
+                                <div class="small text-muted font-monospace d-flex align-items-center">
+                                    {{ tx.target_iban }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-medium text-muted">{{ tx.created_at|date:"d.m.Y" }}</div>
+                                <div class="small text-primary fw-bold font-monospace">{{ tx.created_at|date:"H:i:s" }}</div>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" 
+                                        data-bs-toggle="modal" data-bs-target="#assignModal{{ tx.id }}">
+                                    <i class="fas fa-user-plus me-2"></i>Bayiye Ata
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Assign Modal -->
+                        <div class="modal fade" id="assignModal{{ tx.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                                    <div class="modal-header bg-primary text-white border-0 py-3">
+                                        <h5 class="modal-title fw-bold">Çekim İşlemini Ata</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{% url 'assign-withdrawal' tx.id %}" method="POST">
+                                        {% csrf_token %}
+                                        <div class="modal-body p-4">
+                                            <!-- Transaction Summary -->
+                                            <div class="alert alert-soft-primary border-0 mb-4 p-3 d-flex align-items-center">
+                                                <div class="icon-box-sm bg-primary text-white rounded-circle me-3">
+                                                    <i class="fas fa-money-bill-wave"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-primary fs-5">{{ tx.amount|floatformat:2|intcomma }} ₺</div>
+                                                    <div class="small text-muted fw-medium">{{ tx.target_name }} adına çekim talebi</div>
+                                                </div>
+                                            </div>
+
+                                            <label class="form-label fw-bold mb-3 d-flex align-items-center">
+                                                <i class="fas fa-users text-primary me-2"></i>Müsait Bayi Seçiniz
+                                            </label>
+                                            
+                                            <div class="dealer-selection-list custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
+                                                {% for dealer in dealers %}
+                                                <div class="dealer-option-wrapper mb-2">
+                                                    <input type="radio" class="btn-check" name="dealer_id" 
+                                                           id="dealer{{ tx.id }}_{{ dealer.id }}" value="{{ dealer.id }}"
+                                                           {% if dealer.current_net_balance < tx.amount %}disabled{% endif %} required>
+                                                    <label class="btn btn-outline-light w-100 text-start p-3 d-flex justify-content-between align-items-center border-2" 
+                                                           for="dealer{{ tx.id }}_{{ dealer.id }}"
+                                                           style="border-radius: 12px; transition: all 0.2s;">
+                                                        <div class="d-flex align-items-center">
+                                                            {% if dealer.current_net_balance >= tx.amount %}
+                                                                <div class="status-indicator bg-success me-2"></div>
+                                                                <div class="fw-bold text-dark">{{ dealer.user.username }}</div>
+                                                            {% else %}
+                                                                <div class="status-indicator bg-danger me-2"></div>
+                                                                <div class="fw-bold text-muted">{{ dealer.user.username }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="d-flex flex-column align-items-end">
+                                                            <div class="fw-bold {% if dealer.current_net_balance >= tx.amount %}text-success{% else %}text-danger{% endif %} small">
+                                                                {{ dealer.current_net_balance|floatformat:2|intcomma }} ₺
+                                                            </div>
+                                                            {% if dealer.current_net_balance < tx.amount %}
+                                                                <span class="badge bg-danger-soft text-danger x-small" style="font-size: 0.6rem;">YETERSİZ BAKİYE</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-0 p-4 pt-0">
+                                            <button type="button" class="btn btn-soft-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">İptal</button>
+                                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow">Atamayı Tamamla</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="py-4">
+                                    <i class="fas fa-check-circle fa-4x mb-3 text-success opacity-25"></i>
+                                    <h5 class="text-muted fw-bold">Havuz Boş</h5>
+                                    <p class="text-muted">Atama bekleyen herhangi bir çekim talebi bulunmuyor.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    
+    .btn-check:checked + .btn-outline-light {
+        background-color: rgba(37, 99, 235, 0.05);
+        border-color: #2563eb !important;
+        color: #2563eb !important;
+    }
+    
+    .btn-outline-light {
+        border-color: #f1f5f9 !important;
+        background-color: white;
+    }
+    
+    .btn-outline-light:hover:not(:disabled) {
+        border-color: #2563eb !important;
+        background-color: rgba(37, 99, 235, 0.02);
+    }
+    
+    .btn-check:disabled + .btn-outline-light {
+        background-color: #f8fafc;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .bg-danger-soft { background-color: rgba(220, 38, 38, 0.1); }
+    
+    .icon-box-sm {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}

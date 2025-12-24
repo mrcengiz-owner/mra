@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary shadow-lg">
+                <div class="card-header border-secondary py-3">
+                    <h4 class="mb-0">
+                        <i class="fas fa-university text-primary me-2"></i>
+                        {% if object %}Hesabı Düzenle{% else %}Yeni Banka Hesabı{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary rounded-pill py-2 shadow">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}Değişiklikleri Kaydet{% else %}Hesabı Ekle{% endif %}
+                            </button>
+                            <a href="{% url 'dealer-banks' %}" class="btn btn-soft-secondary rounded-pill">İptal</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

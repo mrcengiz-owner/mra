@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 text-gray-800">Banka Hesaplarım</h2>
+        <a href="{% url 'dealer-bank-add' %}" class="btn btn-primary rounded-pill shadow-sm">
+            <i class="fas fa-plus me-2"></i>Yeni Hesap Ekle
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% for acc in bank_accounts %}
+        <div class="col-md-6 col-lg-4">
+            <!-- New Bank Card Style -->
+            <div class="bank-card-custom h-100 d-flex flex-column justify-content-between shadow-sm">
+                
+                <div class="p-4 flex-grow-1">
+                    <!-- Top Row: Bank Name & Switch -->
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bank-icon-box me-3">
+                                <i class="fas fa-university"></i>
+                            </div>
+                            <div>
+                                <h5 class="bank-name mb-0">{{ acc.bank_name }}</h5>
+                                <span class="badge {% if acc.is_active %}bg-success-soft{% else %}bg-danger-soft{% endif %} x-small mt-1" id="badge-{{ acc.id }}">
+                                    {% if acc.is_active %}Aktif{% else %}Pasif{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Toggle Switch -->
+                        <div class="form-check form-switch pt-1">
+                            <input class="form-check-input bank-status-toggle" 
+                                   type="checkbox" 
+                                   id="switch{{ acc.id }}" 
+                                   data-bank-id="{{ acc.id }}"
+                                   {% if acc.is_active %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <!-- IBAN -->
+                    <div class="mb-4">
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 1px;">IBAN NUMARASI</small>
+                        <div class="iban-text fs-5 mt-1">{{ acc.iban }}</div>
+                    </div>
+
+                    <!-- Bottom Row: Holder -->
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 1px;">HESAP SAHİBİ</small>
+                            <div class="fw-bold text-theme-primary">{{ acc.account_holder }}</div>
+                        </div>
+                        <i class="fas fa-sim-card fa-2x text-muted opacity-25 rotate-90"></i>
+                    </div>
+                </div>
+
+                <!-- Footer Action -->
+                <a href="{% url 'dealer-bank-edit' acc.id %}" class="btn btn-soft-primary w-100 rounded-0 py-3 fw-bold text-uppercase border-top">
+                    <i class="fas fa-pen me-2"></i>Düzenle
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-light border shadow-sm text-center py-5">
+                <i class="fas fa-credit-card fa-3x text-muted mb-3 opacity-25"></i>
+                <h5 class="text-muted">Henüz banka hesabı eklemediniz.</h5>
+                <p>Ödemeleri almak için lütfen bir hesap ekleyin.</p>
+                <a href="{% url 'dealer-bank-add' %}" class="btn btn-outline-primary rounded-pill mt-2">Hesap Ekle</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Simple Toast Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1060">
+    <div id="statusToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage">
+                Durum güncellendi.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.bank-status-toggle').forEach(toggle => {
+    toggle.addEventListener('change', function() {
+        const bankId = this.dataset.bankId;
+        const isChecked = this.checked;
+        const formData = new FormData();
+        formData.append('bank_id', bankId);
+
+        fetch('{% url "toggle-bank-status" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast(data.message, 'bg-success');
+                // Update Badge
+                const badge = document.getElementById(`badge-${bankId}`);
+                if (data.new_state) {
+                    badge.innerText = 'Aktif';
+                    badge.classList.remove('bg-danger-soft');
+                    badge.classList.add('bg-success-soft');
+                } else {
+                    badge.innerText = 'Pasif';
+                    badge.classList.remove('bg-success-soft');
+                    badge.classList.add('bg-danger-soft');
+                }
+            } else {
+                showToast(data.error || 'Hata oluştu', 'bg-danger');
+                this.checked = !isChecked; // Revert
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Bağlantı hatası!', 'bg-danger');
+            this.checked = !isChecked; // Revert
+        });
+    });
+});
+
+function showToast(message, bgColor) {
+    const toastEl = document.getElementById('statusToast');
+    const toastMsg = document.getElementById('toastMessage');
+    toastEl.className = `toast align-items-center text-white ${bgColor} border-0 shadow-lg`;
+    toastMsg.innerText = message;
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+}
+</script>
+
+<style>
+    .bank-card-custom {
+        background: var(--bg-card);
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid var(--border-color);
+    }
+    .bank-card-custom:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--card-shadow);
+    }
+    .bank-icon-box {
+        width: 48px;
+        height: 48px;
+        background: rgba(67, 24, 255, 0.08);
+        color: #4318FF;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .bank-name {
+        color: var(--text-main);
+        font-weight: 700;
+        font-size: 1.1rem;
+        letter-spacing: -0.5px;
+    }
+    .iban-text {
+        color: var(--text-muted);
+        font-family: 'Inter', monospace;
+        letter-spacing: 1px;
+        font-weight: 500;
+    }
+    .bg-success-soft { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .bg-danger-soft { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .x-small { font-size: 0.65rem; padding: 4px 10px; font-weight: 700; text-transform: uppercase; border-radius: 6px; }
+    .rotate-90 { transform: rotate(90deg); }
+    .btn-soft-primary {
+        background-color: rgba(67, 24, 255, 0.08);
+        color: #4318FF;
+        border: none;
+    }
+    .btn-soft-primary:hover {
+        background-color: #4318FF;
+        color: white;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h3 text-theme-primary">Yatırımlarım</h2>
+        </div>
+    </div>
+
+    <!-- Glass Filter Bar -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-glass-card shadow-lg">
+                <form method="GET" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Tarih Aralığı</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="date" name="date_start" class="form-control" value="{{ request.GET.date_start }}">
+                            <span class="input-group-text p-1"><i class="fas fa-arrow-right x-small"></i></span>
+                            <input type="date" name="date_end" class="form-control" value="{{ request.GET.date_end }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Durum</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <select name="status" class="form-select">
+                                <option value="ALL" {% if request.GET.status == 'ALL' %}selected{% endif %}>Tümü</option>
+                                <option value="PENDING" {% if not request.GET.status or request.GET.status == 'PENDING' %}selected{% endif %}>Bekliyor</option>
+                                <option value="APPROVED" {% if request.GET.status == 'APPROVED' %}selected{% endif %}>Onaylı</option>
+                                <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>Reddedildi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Hızlı Ara</label>
+                        <div class="input-group input-group-glass">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" name="search" class="form-control" placeholder="ID, Miktar, İsim..." value="{{ request.GET.search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-filter-gradient w-100 py-2">
+                            <i class="fas fa-filter me-2"></i>SORGULA
+                        </button>
+                        <a href="?" class="btn btn-soft-light border border-white-50 px-3 d-flex align-items-center" title="Temizle">
+                            <i class="fas fa-redo-alt text-white"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if not is_filtered %}
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4" role="alert" style="background: rgba(13, 202, 240, 0.1); border-left: 4px solid #0dcaf0 !important;">
+        <i class="fas fa-bolt fa-lg me-3 text-info"></i>
+        <div>
+            <strong>Operasyonel Mod:</strong> Şu an sadece aksiyon bekleyen <b>güncel</b> işlemler listeleniyor. Takip için sorgulama panelini kullanın.
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <div class="card card-custom shadow-sm border-0">
+        <div class="card-header-custom border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-list-ul me-2"></i>İşlem Listesi</h6>
+            <div class="d-flex align-items-center gap-2">
+                 <span class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-medium">{{ transactions.count }} Kayıt Bulundu</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table-modern w-100 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>GÖNDEREN</th>
+                            <th>MİKTAR</th>
+                            <th>BANKA</th>
+                            <th>TARİH</th>
+                            <th>HARİCİ ID</th>
+                            <th>DURUM</th>
+                            <th class="text-end pe-4">İŞLEMLER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="ps-4"><span class="text-muted fw-bold">#{{ tx.id }}</span></td>
+                            <td>
+                                <div class="fw-bold fs-6 text-theme-primary">{{ tx.sender_full_name|default:"---"|upper }}</div>
+                            </td>
+                            <td class="fw-bold text-success font-monospace">+{{ tx.amount|floatformat:2|intcomma }} ₺</td>
+                            <td>
+                                <div class="fw-medium small text-uppercase">{{ tx.bank_account.bank_name }}</div>
+                            </td>
+                            <td>
+                                <div class="small fw-medium text-muted">{{ tx.created_at|date:"d.m.Y" }}</div>
+                                <div class="small text-primary fw-bold font-monospace">{{ tx.created_at|date:"H:i:s" }}</div>
+                            </td>
+                            <td><code class="text-primary small px-2 py-1 bg-light rounded">{{ tx.external_user_id }}</code></td>
+                            <td>
+                                {% if tx.status == 'APPROVED' %}
+                                <span class="badge badge-soft-success"><i class="fas fa-check-circle me-1"></i>Onaylandı</span>
+                                {% elif tx.status == 'PENDING' %}
+                                <span class="badge badge-soft-warning"><i class="fas fa-clock me-1"></i>Bekliyor</span>
+                                {% else %}
+                                <span class="badge badge-soft-danger d-inline-flex align-items-center">
+                                    <i class="fas fa-times-circle me-1"></i>Reddedildi
+                                    {% if tx.rejection_reason %}
+                                        <i class="fas fa-info-circle ms-1 cursor-pointer" data-bs-toggle="tooltip" title="Sebep: {{ tx.rejection_reason }}"></i>
+                                    {% endif %}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if tx.status == 'PENDING' %}
+                                <div class="d-flex justify-content-end gap-2">
+                                    <form action="{% url 'dealer-transaction-action' tx.id 'approve' %}" method="POST" class="d-inline" onsubmit="return confirm('Bu yatırımı onaylıyor musunuz?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-soft-success fw-bold px-3 py-2">
+                                            <i class="fas fa-check me-1"></i> Onayla
+                                        </button>
+                                    </form>
+                                    
+                                    <a href="{% url 'dealer-transaction-update' tx.id %}" class="btn btn-sm btn-soft-warning fw-bold px-3 py-2 text-decoration-none">
+                                        <i class="fas fa-pencil-alt me-1"></i> Düzelt
+                                    </a>
+
+                                    <button type="button" class="btn btn-sm btn-soft-danger fw-bold px-3 py-2" onclick="rejectTransaction('{{ tx.id }}', '{% url 'dealer-transaction-action' tx.id 'reject' %}')">
+                                        <i class="fas fa-times me-1"></i> Reddet
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="text-muted opacity-50"><i class="fas fa-info-circle"></i></div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+                                <p class="mb-0">Kayıt bulunamadı.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

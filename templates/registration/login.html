@@ -1,0 +1,255 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap | PayGate</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --text-color: #ffffff;
+            --text-muted: #a0a0a0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0f0c29;  /* fallback for old browsers */
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Mesh Background Elements */
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: float 10s infinite alternate;
+        }
+        .shape-1 {
+            top: -10%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: #764ba2;
+            opacity: 0.4;
+        }
+        .shape-2 {
+            bottom: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: #667eea;
+            opacity: 0.4;
+            animation-duration: 15s;
+        }
+        .shape-3 {
+            bottom: 30%;
+            left: 20%;
+            width: 300px;
+            height: 300px;
+            background: #ff00cc;
+            opacity: 0.2;
+            animation-duration: 12s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 50px); }
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+            overflow: hidden;
+            color: var(--text-color);
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-25deg);
+            animation: shine 8s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        .brand-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(to right, #fff, #a5a5a5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .form-floating > .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            border-radius: 10px;
+        }
+        
+        .form-floating > .form-control:focus {
+            background: rgba(255,255,255,0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+            color: #fff;
+        }
+
+        .form-floating > label {
+            color: var(--text-muted);
+        }
+        
+        .form-floating > .form-control:focus ~ label,
+        .form-floating > .form-control:not(:placeholder-shown) ~ label {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .btn-login {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .forgot-password a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .forgot-password a:hover {
+            color: #fff;
+        }
+
+        .input-group-text {
+            background: transparent;
+            border: none;
+            color: white;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Shapes -->
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+
+    <div class="container">
+        <div class="d-flex justify-content-center">
+            <div class="login-card">
+                <div class="brand-logo">
+                    <i class="fas fa-layer-group me-2"></i>PayGate
+                </div>
+                
+                <h5 class="text-center mb-4 text-white-50 fw-light">Hesabınıza Giriş Yapın</h5>
+
+                {% if form.errors %}
+                <div class="alert alert-danger py-2 mb-3 bg-danger bg-opacity-25 border-0 text-white small rounded-3">
+                    <i class="fas fa-exclamation-circle me-2"></i>Kullanıcı adı veya şifre hatalı.
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-floating mb-3">
+                        <input type="text" name="username" class="form-control" id="id_username" placeholder="Kullanıcı Adı" required>
+                        <label for="id_username"><i class="fas fa-user me-2"></i>Kullanıcı Adı</label>
+                    </div>
+
+                    <div class="form-floating mb-3 position-relative">
+                        <input type="password" name="password" class="form-control" id="id_password" placeholder="Parola" required>
+                        <label for="id_password"><i class="fas fa-lock me-2"></i>Parola</label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input bg-dark border-secondary" type="checkbox" value="" id="rememberMe">
+                        <label class="form-check-label text-muted small" for="rememberMe">
+                            Beni Hatırla
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-login">
+                        Giriş Yap <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+
+                    <div class="forgot-password">
+                        <a href="#"><i class="fas fa-key me-1"></i> Şifremi Unuttum</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block page_title %}Komisyon Raporları{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h3 text-theme-primary">Komisyon Analizi</h2>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-custom mb-4 border-0 shadow-sm">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Bayi Filtresi</label>
+                    <select name="dealer" class="form-select border-0 bg-light rounded-pill">
+                        <option value="">Tüm Bayiler</option>
+                        {% for d in sub_dealers %}
+                        <option value="{{ d.id }}" {% if request.GET.dealer == d.id|stringformat:"i" %}selected{% endif %}>
+                            {{ d.user.username|upper }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Tarih Aralığı</label>
+                    <div class="input-group">
+                        <input type="date" name="date_start" class="form-control border-0 bg-light rounded-start-pill" value="{{ request.GET.date_start }}">
+                        <span class="input-group-text border-0 bg-light"><i class="fas fa-arrow-right x-small text-muted"></i></span>
+                        <input type="date" name="date_end" class="form-control border-0 bg-light rounded-end-pill" value="{{ request.GET.date_end }}">
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 flex-grow-1">
+                        <i class="fas fa-filter me-2"></i>Analiz Et
+                    </button>
+                    <a href="{% url 'commission-report-page' %}" class="btn btn-soft-secondary rounded-pill px-3" title="Sıfırla">
+                        <i class="fas fa-sync-alt"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Total Earnings -->
+        <div class="col-md-6">
+            <div class="card card-stat bg-gradient-warning h-100 text-white shadow-sm">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                         <h6 class="text-uppercase ls-1 opacity-75 mb-2" style="font-size: 0.75rem;">Toplam Kazanç (Komisyon)</h6>
+                         <h2 class="mb-0 fw-bold display-6">{{ total_earnings|default:0|floatformat:2|intcomma }} ₺</h2>
+                    </div>
+                    <div class="icon-box text-white opacity-25">
+                        <i class="fas fa-coins fa-4x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Volume -->
+        <div class="col-md-6">
+            <div class="card card-stat bg-gradient-info h-100 text-white shadow-sm">
+                 <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                         <h6 class="text-uppercase ls-1 opacity-75 mb-2" style="font-size: 0.75rem;">İşlenen Hacim (Yatırım)</h6>
+                         <h2 class="mb-0 fw-bold display-6">{{ total_volume|default:0|floatformat:2|intcomma }} ₺</h2>
+                    </div>
+                    <div class="icon-box text-white opacity-25">
+                        <i class="fas fa-chart-bar fa-4x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-custom border-0 shadow-sm overflow-hidden">
+        <div class="card-header-custom border-bottom p-3">
+            <h6 class="fw-bold m-0 text-primary"><i class="fas fa-calendar-check me-2"></i>Günlük Komisyon Getirileri</h6>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table-modern w-100 align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tarih</th>
+                        <th>İşlem Adedi</th>
+                        <th class="text-end">İşlem Hacmi</th>
+                        <th class="text-end pe-4">Komisyon Getirisi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_data %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-theme-primary">{{ row.date|date:"d F Y"|default:row.date }}</td>
+                        <td><span class="badge bg-soft-primary rounded-pill px-3">{{ row.count }} İşlem</span></td>
+                        <td class="text-end fw-medium text-muted">{{ row.volume|floatformat:2|intcomma }} ₺</td>
+                        <td class="text-end pe-4 fw-bold text-success font-monospace fs-6">+{{ row.commission|floatformat:2|intcomma }} ₺</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="fas fa-search fa-3x mb-3 d-block opacity-25"></i>
+                            Seçili kriterlere uygun veri bulunamadı.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important; }
+    .bg-gradient-info { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%) !important; }
+    .ls-1 { letter-spacing: 1px; }
+    .btn-soft-secondary {
+        background-color: rgba(67, 24, 255, 0.08);
+        color: #4318FF;
+        border: none;
+    }
+    .btn-soft-secondary:hover {
+        background-color: #4318FF;
+        color: white;
+    }
+</style>
+{% endblock %}

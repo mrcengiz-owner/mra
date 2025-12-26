@@ -98,11 +98,11 @@ class CreateWithdrawalAPIView(APIView):
     # For now, I'll keep it but the new 'Pool' one is primary.
     ...
 
-from finance.api.authentication import CsrfExemptSessionAuthentication
+from api.authentication import ApiKeyAuthentication
 from rest_framework.authentication import BasicAuthentication
 
 class DepositRequestAPIView(APIView):
-    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
+    authentication_classes = [ApiKeyAuthentication]
     permission_classes = [IsAuthenticatedClient]
     throttle_scope = 'deposit'
 

@@ -10,20 +10,31 @@ class IsAuthenticatedClient(permissions.BasePermission):
     Checks X-API-KEY header and validates against whitelisted IPs.
     """
     def has_permission(self, request, view):
-        api_key = request.headers.get('X-API-KEY')
-        ip_addr = request.META.get('REMOTE_ADDR')
-       
-        if not api_key:
-            return False
-
-        try:
-            client = APIClient.objects.get(api_key=api_key, is_active=True)
-        except APIClient.DoesNotExist:
-            logger.warning(f"Invalid API Key attempt: {api_key}")
-            return False
+        # If ApiKeyAuthentication ran successfully, request.auth should be the APIClient object
+        client = request.auth
+        
+        # If authentication failed or wasn't the ApiKeyAuthentication, try manual check (fallback)
+        # But for DepositRequestAPIView, we enforce Auth class, so this strictly implies success.
+        from accounts.models import APIClient # Ensure import if needed
+        
+        if not isinstance(client, APIClient):
+            # Fallback for views that might not have the Auth class but use this Permission
+            api_key = request.headers.get('X-API-KEY')
+            if not api_key:
+                return False
+            try:
+                client = APIClient.objects.get(api_key=api_key, is_active=True)
+            except APIClient.DoesNotExist:
+                logger.warning(f"Invalid API Key attempt: {api_key}")
+                return False
 
         # IP Validation
         ip_addr = self.get_client_ip(request)
+        
+        # Ensure client has allowed_ips attribute
+        if not hasattr(client, 'allowed_ips'):
+             return False
+
         whitelisted_ips = [ip.strip() for ip in client.allowed_ips.split(',')]
         
         if ip_addr not in whitelisted_ips:

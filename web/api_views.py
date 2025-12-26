@@ -101,9 +101,11 @@ class CreateWithdrawalAPIView(APIView):
 from api.authentication import ApiKeyAuthentication
 from rest_framework.authentication import BasicAuthentication
 
+from rest_framework.permissions import AllowAny
+
 class DepositRequestAPIView(APIView):
     authentication_classes = [ApiKeyAuthentication]
-    permission_classes = [IsAuthenticatedClient]
+    permission_classes = [AllowAny]
     throttle_scope = 'deposit'
 
     def post(self, request, format=None):

@@ -13,17 +13,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from accounts.models import CustomUser
+
 class DealerMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_subdealer()
+        u = self.request.user
+        return u.is_authenticated and (u.is_subdealer() or u.is_superadmin() or u.role == CustomUser.Roles.ADMIN)
 
     def get_profile(self):
-        return self.request.user.profile
+        if hasattr(self.request.user, 'profile'):
+            return self.request.user.profile
+        return None
 
 class FilteredTransactionListView(DealerMixin, ListView):
     def get_queryset_base(self, tx_type):
         profile = self.get_profile()
-        qs = Transaction.objects.filter(sub_dealer=profile, transaction_type=tx_type).select_related('bank_account')
+        
+        # Admin View (See All) vs Dealer View (See Own)
+        if profile:
+            qs = Transaction.objects.filter(sub_dealer=profile, transaction_type=tx_type).select_related('bank_account', 'sub_dealer__user')
+        else:
+            # Admin watching dealer screens
+            qs = Transaction.objects.filter(transaction_type=tx_type).select_related('bank_account', 'sub_dealer__user')
         
         # Filter Parameters
         status_filter = self.request.GET.get('status')

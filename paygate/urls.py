@@ -25,6 +25,11 @@ from two_factor.admin import AdminSiteOTPRequired
 # Force Admin to check for 2FA
 admin.site.__class__ = AdminSiteOTPRequired
 
+# Strict Access: Only Superusers
+def permission_check(request):
+    return request.user.is_active and request.user.is_superuser
+admin.site.has_permission = permission_check
+
 from two_factor.views import LoginView
 
 from accounts.views import FixedSetupView

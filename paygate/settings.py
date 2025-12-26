@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'accounts',
     'finance',
     'web',
+    'api',
     'django.contrib.humanize',
     'crispy_forms',
     'crispy_bootstrap5',

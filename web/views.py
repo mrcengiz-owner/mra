@@ -691,7 +691,7 @@ class AdminWithdrawalPoolView(UserPassesTestMixin, ListView):
     context_object_name = 'transactions'
 
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def get_queryset(self):
         return Transaction.objects.filter(status=Transaction.Status.WAITING_ASSIGNMENT).order_by('created_at')
@@ -704,7 +704,7 @@ class AdminWithdrawalPoolView(UserPassesTestMixin, ListView):
 
 class AssignWithdrawalView(UserPassesTestMixin, View):
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def post(self, request, pk):
         dealer_id = request.POST.get('dealer_id')
@@ -725,7 +725,7 @@ class AssignWithdrawalView(UserPassesTestMixin, View):
 
 class RejectPoolWithdrawalView(UserPassesTestMixin, View):
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def post(self, request, pk):
         txn = get_object_or_404(Transaction, pk=pk, status=Transaction.Status.WAITING_ASSIGNMENT)
@@ -742,7 +742,7 @@ class RejectPoolWithdrawalView(UserPassesTestMixin, View):
 
 class ReturnToPoolView(UserPassesTestMixin, View):
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def post(self, request, pk):
         txn = get_object_or_404(Transaction, pk=pk, transaction_type=Transaction.TransactionType.WITHDRAW)
@@ -772,7 +772,7 @@ class AuditLogListView(UserPassesTestMixin, ListView):
     paginate_by = 50
 
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def get_queryset(self):
         return AuditLog.objects.select_related('user').all().order_by('-created_at')

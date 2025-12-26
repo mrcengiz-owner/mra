@@ -141,6 +141,7 @@ class DepositRequestAPIView(APIView):
             amount = serializer.validated_data['amount']
             full_name = serializer.validated_data['full_name']
             user_id_val = serializer.validated_data['user_id']
+            callback_url = serializer.validated_data.get('callback_url')
 
             from django.db import transaction
             
@@ -196,6 +197,7 @@ class DepositRequestAPIView(APIView):
                     amount=amount,
                     external_user_id=user_id_val,
                     sender_full_name=full_name,
+                    callback_url=callback_url,
                     description=f"Depositor: {full_name}"
                 )
 

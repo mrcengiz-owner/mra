@@ -48,6 +48,10 @@
                                         data-bs-toggle="modal" data-bs-target="#assignModal{{ tx.id }}">
                                     <i class="fas fa-user-plus me-2"></i>Bayiye Ata
                                 </button>
+                                <button type="button" class="btn btn-soft-danger rounded-pill px-4 shadow-sm ms-2" 
+                                        data-bs-toggle="modal" data-bs-target="#rejectModal{{ tx.id }}">
+                                    <i class="fas fa-times me-2"></i>İptal Et
+                                </button>
                             </td>
                         </tr>
 
@@ -111,6 +115,41 @@
                                         <div class="modal-footer border-0 p-4 pt-0">
                                             <button type="button" class="btn btn-soft-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">İptal</button>
                                             <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow">Atamayı Tamamla</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reject Modal -->
+                        <div class="modal fade" id="rejectModal{{ tx.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                                    <div class="modal-header bg-danger text-white border-0 py-3">
+                                        <h5 class="modal-title fw-bold">Çekim İşlemini İptal Et</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{% url 'reject-pool-withdrawal' tx.id %}" method="POST">
+                                        {% csrf_token %}
+                                        <div class="modal-body p-4">
+                                            <div class="alert alert-soft-danger border-0 mb-4 p-3 d-flex align-items-center">
+                                                <div class="icon-box-sm bg-danger text-white rounded-circle me-3">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-danger fs-6">Bu işlem kalıcı olarak iptal edilecektir.</div>
+                                                    <div class="small text-muted fw-medium">Lütfen iptal sebebini belirtiniz.</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold required">İptal Nedeni</label>
+                                                <textarea name="rejection_reason" class="form-control" rows="3" required placeholder="Örn: Hatalı IBAN bilgisi..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-0 p-4 pt-0">
+                                            <button type="button" class="btn btn-soft-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Vazgeç</button>
+                                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow">İşlemi İptal Et</button>
                                         </div>
                                     </form>
                                 </div>

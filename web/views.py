@@ -717,6 +717,23 @@ class AssignWithdrawalView(UserPassesTestMixin, View):
         messages.success(request, f"İşlem {dealer.user.username} bayisine atandı.")
         return redirect('admin-withdrawal-pool')
 
+class RejectPoolWithdrawalView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+
+    def post(self, request, pk):
+        txn = get_object_or_404(Transaction, pk=pk, status=Transaction.Status.WAITING_ASSIGNMENT)
+        reason = request.POST.get('rejection_reason')
+        
+        txn.status = Transaction.Status.REJECTED
+        txn.rejection_reason = reason or "Admin tarafından havuzdan reddedildi."
+        txn.processed_at = timezone.now()
+        txn.processed_by = request.user
+        txn.save()
+
+        messages.warning(request, f"#{txn.id} numaralı işlem reddedildi.")
+        return redirect('admin-withdrawal-pool')
+
 class ReturnToPoolView(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_authenticated and self.request.user.is_superadmin()

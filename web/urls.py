@@ -5,7 +5,7 @@ from .views import (
     SubDealerDashboardView,    ReportsPageView, export_reports_csv,
     DepositsListView, TransactionActionView, ManualAdjustmentView, GlobalSettingsView, WithdrawalsListView,
     AdminDealerAnalyticsView, CommissionReportView, AdminWithdrawalPoolView, AssignWithdrawalView, ReturnToPoolView, AuditLogListView, ToggleUserStatusView,
-    AdminBankListView, UpdateTransactionAmountView
+    AdminBankListView, UpdateTransactionAmountView, RejectPoolWithdrawalView
 )
 from .views_dealer import (
     DealerDepositListView, DealerWithdrawalListView, DealerTransactionUpdateView, 
@@ -67,6 +67,7 @@ urlpatterns = [
     path('manual-adjustment/', ManualAdjustmentView.as_view(), name='manual-adjustment'),
     path('management/withdrawal-pool/', AdminWithdrawalPoolView.as_view(), name='admin-withdrawal-pool'),
     path('management/assign-withdrawal/<int:pk>/', AssignWithdrawalView.as_view(), name='assign-withdrawal'),
+    path('management/reject-withdrawal/<int:pk>/', RejectPoolWithdrawalView.as_view(), name='reject-pool-withdrawal'),
     
     # System Ops
     path('global-settings/', GlobalSettingsView.as_view(), name='global-settings'),

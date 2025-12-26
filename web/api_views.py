@@ -13,7 +13,10 @@ from finance.utils import send_notification
 import logging
 
 from api.authentication import ApiKeyAuthentication
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+from accounts.models import CustomUser
 
 logger = logging.getLogger(__name__)
 
@@ -256,3 +259,38 @@ class DepositConfirmAPIView(APIView):
                  return Response({"error": "İşlem iptal edilmiş veya geçersiz."}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ToggleUserStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        User = get_user_model()
+        target_user = get_object_or_404(User, pk=pk)
+        
+        # Self-Protection
+        if request.user == target_user:
+            return Response({"detail": "Kendinizi pasif duruma getiremezsiniz."}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Permission Logic
+        if request.user.is_superuser or (hasattr(request.user, 'is_superadmin') and request.user.is_superadmin()):
+            pass
+        elif request.user.role == CustomUser.Roles.ADMIN:
+            # Helper: Check if target is Admin/SuperAdmin
+            if target_user.is_superuser or target_user.role == CustomUser.Roles.ADMIN:
+                 return Response({"detail": "Yönetici hiyerarşisinde üst veya eşit rolleri değiştiremezsiniz."}, status=status.HTTP_403_FORBIDDEN)
+        else:
+             return Response({"detail": "Yetkiniz yok."}, status=status.HTTP_403_FORBIDDEN)
+            
+        new_status = not target_user.is_active
+        target_user.is_active = new_status
+        target_user.save()
+        
+        # Sync Profile if exists
+        if hasattr(target_user, 'profile'):
+             target_user.profile.is_active_by_system = new_status
+             target_user.profile.save()
+             
+        # Log Logic (re-using existing log_action imported in file)
+        log_action(request, request.user, 'TOGGLE_USER_STATUS', target_user, details={'new_status': new_status})
+        
+        return Response({"status": "success", "is_active": new_status})

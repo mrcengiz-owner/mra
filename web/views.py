@@ -1,4 +1,5 @@
 from django.contrib.auth.views import LoginView
+from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import redirect
 from django.views.generic import TemplateView, ListView
@@ -243,29 +244,22 @@ def export_reports_csv(request):
     qs = f.qs
     
     # Security Check
+    # Security Check
     if request.user.is_subdealer():
         qs = qs.filter(sub_dealer=request.user.profile)
-    elif not request.user.is_superadmin():
-        return HttpResponse("Unauthorized", status=403)
+    elif not (request.user.is_superadmin() or request.user.role == CustomUser.Roles.ADMIN):
+        return HttpResponse("Unauthorized: Only Admins or SubDealers can export.", status=403)
         
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="paygate_report_{timezone.now().strftime("%Y%m%d")}.csv"'
+    # Use Generic Export Utils
+    from .utils_export import export_data
+
     
-    writer = csv.writer(response)
-    writer.writerow(['ID', 'Date', 'Dealer', 'Type', 'Status', 'Amount', 'Currency'])
+    format_type = request.GET.get('format', 'csv')
     
-    for tx in qs:
-        writer.writerow([
-            tx.id,
-            tx.created_at.strftime('%Y-%m-%d %H:%M'),
-            tx.sub_dealer.user.username,
-            tx.get_transaction_type_display(),
-            tx.get_status_display(),
-            tx.amount,
-            'TRY'
-        ])
-        
-    return response
+    columns = ['id', 'created_at.date', 'sub_dealer.user.id', 'sub_dealer.user.get_full_name', 'sub_dealer.user.username', 'transaction_type', 'amount', 'commission_amount', 'get_status_display']
+    headers = ['ID', 'Tarih', 'Kullanıcı ID', 'Ad Soyad', 'Bayi', 'Tip', 'Tutar', 'Komisyon', 'Durum']
+    
+    return export_data(qs, format_type, 'Genel_Rapor', columns, headers)
 
 class DepositsListView(UserPassesTestMixin, ListView):
     template_name = 'web/deposits.html'
@@ -298,6 +292,16 @@ class DepositsListView(UserPassesTestMixin, ListView):
             )
             
         return qs.select_related('sub_dealer', 'sub_dealer__user', 'bank_account', 'processed_by').order_by('-created_at')
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('format') in ['csv', 'xlsx', 'pdf']:
+            from .utils_export import export_data
+            qs = self.get_queryset()
+            # Requester Info: SubDealer User ID and Full Name
+            columns = ['id', 'created_at.date', 'sub_dealer.user.id', 'sub_dealer.user.get_full_name', 'sub_dealer.user.username', 'external_user_id', 'sender_full_name', 'amount', 'commission_amount', 'get_status_display']
+            headers = ['ID', 'Tarih', 'Kullanıcı ID', 'Ad Soyad', 'Bayi', 'Harici Kullanıcı ID', 'Gönderen', 'Tutar', 'Komisyon', 'Durum']
+            return export_data(qs, request.GET['format'], 'Yatirim_Raporu', columns, headers)
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -438,6 +442,15 @@ class WithdrawalsListView(UserPassesTestMixin, ListView):
             )
             
         return qs.select_related('sub_dealer', 'sub_dealer__user', 'processed_by').order_by('-created_at')
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('format') in ['csv', 'xlsx', 'pdf']:
+            from .utils_export import export_data
+            qs = self.get_queryset()
+            columns = ['id', 'created_at.date', 'sub_dealer.user.id', 'sub_dealer.user.get_full_name', 'sub_dealer.user.username', 'external_user_id', 'target_name', 'target_iban', 'amount', 'get_status_display']
+            headers = ['ID', 'Tarih', 'Kullanıcı ID', 'Ad Soyad', 'Bayi', 'Harici Kullanıcı ID', 'Alıcı Adı', 'IBAN', 'Tutar', 'Durum']
+            return export_data(qs, request.GET['format'], 'Cekim_Talepleri', columns, headers)
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -871,3 +884,35 @@ class UpdateTransactionAmountView(UserPassesTestMixin, View):
             return JsonResponse({'status': 'success', 'new_amount': str(new_amount)})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+class UserListView(UserPassesTestMixin, ListView):
+    model = CustomUser
+    template_name = 'web/user_list.html'
+    context_object_name = 'users'
+    ordering = ['-date_joined']
+
+    def test_func(self):
+        u = self.request.user
+        return u.is_authenticated and (u.is_superadmin() or u.role == CustomUser.Roles.ADMIN)
+
+@require_POST
+def admin_toggle_bank_status(request):
+    if not request.user.is_authenticated or not (request.user.is_superuser or request.user.role == CustomUser.Roles.ADMIN):
+         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+         
+    bank_id = request.POST.get('pk')
+    
+    if not bank_id:
+        return JsonResponse({'status': 'error', 'message': 'Missing ID'}, status=400)
+
+    bank = get_object_or_404(BankAccount, pk=bank_id)
+    bank.is_active = not bank.is_active
+    bank.save()
+    
+    log_action(request, request.user, 'TOGGLE_BANK_STATUS', bank, details={'new_status': bank.is_active})
+    
+    return JsonResponse({
+        'status': 'success', 
+        'new_state': bank.is_active,
+        'message': 'Durum güncellendi'
+    })

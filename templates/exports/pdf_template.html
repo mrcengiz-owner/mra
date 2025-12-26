@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+        /* Türkçe Karakter Desteği için DejaVu Sans veya benzeri bir font şart */
+        body { 
+            font-family: "DejaVu Sans", "Arial", sans-serif; 
+        }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; color: #1a237e; }
+        .report-title { font-size: 18px; margin-top: 5px; color: #555; text-transform: uppercase; }
+        .meta { font-size: 10px; color: #777; text-align: right; margin-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 10px; }
+        th, td { border: 1px solid #e0e0e0; padding: 8px; text-align: left; vertical-align: middle; }
+        th { background-color: #f0f2f5; color: #333; font-weight: bold; text-transform: uppercase; }
+        tr:nth-child(even) { background-color: #fcfcfc; }
+        tr:hover { background-color: #f5f5f5; }
+        
+        .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">NEXKASA</div>
+        <div class="report-title">{{ resource_name }}</div>
+    </div>
+    
+    <div class="meta">
+        Oluşturulma Tarihi: {{ date|date:"d.m.Y H:i" }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                {% for h in headers %}
+                <th>{{ h }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data_list %}
+            <tr>
+                {% for cell in row %}
+                <td>{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Bu rapor NexKasa Yönetim Paneli tarafından otomatik olarak oluşturulmuştur.
+    </div>
+</body>
+</html>

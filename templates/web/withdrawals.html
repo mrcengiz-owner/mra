@@ -55,6 +55,31 @@
                     <a href="{% url 'withdrawal-queue' %}" class="btn btn-soft-secondary rounded-pill px-3" title="Sıfırla">
                         <i class="fas fa-sync-alt"></i>
                     </a>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-light border rounded-pill px-3 text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Dışa Aktar">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><h6 class="dropdown-header text-uppercase small fw-bold">Rapor Oluştur</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item py-2" href="?{{ request.GET.urlencode }}&format=pdf">
+                                    <i class="far fa-file-pdf me-2 text-danger"></i>PDF Belgesi
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2" href="?{{ request.GET.urlencode }}&format=xlsx">
+                                    <i class="far fa-file-excel me-2 text-success"></i>Excel Tablosu
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2" href="?{{ request.GET.urlencode }}&format=csv">
+                                    <i class="fas fa-file-csv me-2 text-info"></i>CSV (Ham Veri)
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </form>
         </div>
@@ -68,6 +93,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>KULLANICI</th>
                             <th>BAYİ</th>
                             <th>ALICI ADI</th>
                             <th>ALICI IBAN</th>
@@ -82,6 +108,14 @@
                         {% for tx in transactions %}
                         <tr class="{% if tx.status == 'PENDING' %}bg-soft-warning-row{% endif %}">
                             <td class="fw-bold">#{{ tx.id }}</td>
+                            <td>
+                                {% if tx.sub_dealer %}
+                                <div class="fw-bold text-dark">#{{ tx.sub_dealer.user.id }}</div>
+                                <div class="small text-muted">{{ tx.sub_dealer.user.get_full_name }}</div>
+                                {% else %}
+                                <span class="badge bg-light text-dark">SİSTEM</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="fw-bold text-primary">{{ tx.sub_dealer.user.username|upper|default:"HAVUZDA" }}</span>
                             </td>

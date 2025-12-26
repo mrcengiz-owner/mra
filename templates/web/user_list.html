@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-theme-primary fw-bold mb-0">
+            <i class="fas fa-users me-2"></i>Kullanıcı Yönetimi
+        </h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                <i class="fas fa-user-plus me-1"></i>Yeni Kullanıcı Ekle
+            </button>
+            <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Yenile
+            </button>
+        </div>
+    </div>
+
+    <!-- User Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="bg-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Kullanıcı</th>
+                            <th>E-Posta</th>
+                            <th>Rol (Yetki)</th>
+                            <th>Kayıt Tarihi</th>
+                            <th class="text-center">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ u.username }}</div>
+                                <div class="text-muted small">ID: {{ u.id }}</div>
+                            </td>
+                            <td>{{ u.email|default:"-" }}</td>
+                            <td>
+                                {% if u.is_superuser %}
+                                    <span class="badge bg-danger rounded-pill">Süper Admin</span>
+                                {% elif u.role == 'ADMIN' %}
+                                    <span class="badge bg-primary rounded-pill">Admin</span>
+                                {% elif u.role == 'SUBDEALER' %}
+                                    <span class="badge bg-info text-dark rounded-pill">Saha / Bayi</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill">{{ u.role }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.date_joined|date:"d M Y H:i" }}</td>
+                            <td class="text-center">
+                                <!-- Logic for Permission Check -->
+                                {% with u_role=u.role is_super=u.is_superuser %}
+                                    <div class="form-check form-switch d-flex justify-content-center">
+                                        <input class="form-check-input user-status-toggle" type="checkbox" 
+                                               data-user-id="{{ u.id }}" 
+                                               {% if u.is_active %}checked{% endif %}
+                                               {% if u.id == request.user.id %}
+                                                   disabled title="Kendinizi kapatamazsınız"
+                                               {% elif not request.user.is_superuser and request.user.role != 'ADMIN' %}
+                                                   disabled title="Yetkiniz yok"
+                                               {% elif request.user.role == 'ADMIN' and u.role == 'ADMIN' %}
+                                                   disabled title="Adminleri düzenleyemezsiniz"
+                                               {% elif request.user.role == 'ADMIN' and is_super %}
+                                                   disabled title="Süper Admini düzenleyemezsiniz"
+                                               {% endif %}
+                                        >
+                                    </div>
+                                {% endwith %}
+                                <!-- Toggle logic can be added here similar to dealers -->
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">Kullanıcı bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal (Shared Logic) -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <!-- Tailwind classes included as requested: bg-white dark:bg-gray-800 ... -->
+        <div class="modal-content bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-0 shadow-lg">
+            <div class="modal-header border-bottom border-gray-200 dark:border-gray-700">
+                <h5 class="modal-title fw-bold" id="createUserModalLabel">Yeni Kullanıcı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createUserForm">
+                    <div class="mb-3">
+                        <label for="newUsername" class="form-label text-muted small text-uppercase fw-bold">Kullanıcı Adı (Zorunlu)</label>
+                        <input type="text" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newUsername" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newEmail" class="form-label text-muted small text-uppercase fw-bold">E-posta (Opsiyonel)</label>
+                        <input type="email" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newEmail" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label text-muted small text-uppercase fw-bold">Şifre (Min 8 Karakter)</label>
+                        <input type="password" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newPassword" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newRole" class="form-label text-muted small text-uppercase fw-bold">Rol (Yetki)</label>
+                        <select class="form-select bg-light dark:bg-gray-700 dark:text-white border-0" id="newRole" name="role" required>
+                            <option value="SUBDEALER" selected>Alt Bayi (Saha/Bayi)</option>
+                            <option value="ADMIN">Admin</option>
+                            <!-- FIELD_AGENT concept: Mapping to existing Roles if distinct, otherwise using SUBDEALER? 
+                                 User request says: 'Field Agent' (Saha), 'Sub-Dealer' (Bayi).
+                                 Model only has SUPERADMIN, ADMIN, SUBDEALER.
+                                 Assume 'Field Agent' == 'SUBDEALER' for now or same role.
+                                 If User insists on 'Field Agent', I'd need to check choices.
+                                 Model has: SUBDEALER = 'Alt Bayi'.
+                                 I'll just stick to valid choices.
+                            -->
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            "Alt Bayi" seçilirse otomatik olarak Saha Profili oluşturulur.
+                        </div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                            <i class="fas fa-save me-2"></i>Kullanıcıyı Oluştur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('createUserForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>İşleniyor...';
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        fetch('{% url "api-create-user" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json().then(d => ({status: response.status, body: d})))
+        .then(result => {
+            if (result.status === 201) {
+                alert('Başarılı! Kullanıcı oluşturuldu.');
+                window.location.reload();
+            } else {
+                let msg = 'Hata oluştu.';
+                if(result.body) {
+                   if(result.body.detail) msg = result.body.detail;
+                   else if(typeof result.body === 'string') msg = result.body;
+                   else msg = JSON.stringify(result.body);
+                }
+                alert('Hata: ' + msg);
+            }
+        })
+        .catch(err => alert('Ağ Hatası: ' + err))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+
+    // User Status Toggle Logic
+    document.querySelectorAll('.user-status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            const newState = this.checked;
+            const originalState = !newState; 
+            
+            this.disabled = true;
+
+            const url = "{% url 'api-toggle-user-status' 0 %}".replace('0', userId);
+
+            fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({})
+            })
+            .then(res => {
+                if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Güncellendi',
+                        text: 'Kullanıcı durumu başarıyla değiştirildi.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    this.disabled = false;
+                } else {
+                    res.json().then(d => {
+                         Swal.fire({
+                            icon: 'error',
+                            title: 'Hata',
+                            text: d.detail || 'İşlem başarısız.',
+                        });
+                    });
+                    this.checked = originalState;
+                    this.disabled = false;
+                }
+            })
+            .catch(err => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ağ Hatası',
+                    text: 'Sunucuya ulaşılamadı.',
+                });
+                this.checked = originalState;
+                this.disabled = false;
+            });
+        });
+    });
+</script>
+{% endblock %}

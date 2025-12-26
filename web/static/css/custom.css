@@ -240,7 +240,7 @@ html[data-bs-theme="dark"] input:-webkit-autofill:active {
 
 /* DASHBOARD KART DÜZENLEMESİ */
 .dashboard-amount {
-    font-size: clamp(1.65rem, 2.75vw, 2.5rem) !important;
+    font-size: clamp(1.45rem, 2.75vw, 2.3rem) !important;
     letter-spacing: -0.5px;
     font-weight: 800 !important;
 }

@@ -54,11 +54,17 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
+from accounts.api_views import CreateUserAPIView
+from accounts.api_views import UpdateDealerConfigView
+
 urlpatterns = [
     # Swagger / Redoc
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+
+    path('api/users/create/', CreateUserAPIView.as_view(), name='api-create-user'),
+    path('api/users/<int:pk>/config/', UpdateDealerConfigView.as_view(), name='api-dealer-config'),
 
     path('', LoginView.as_view(template_name='two_factor/core/login.html'), name='login'),
     # Custom View - Standart olanı eziyoruz

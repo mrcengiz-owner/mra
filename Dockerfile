@@ -13,6 +13,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
+    libcairo2-dev \
+    pkg-config \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Bağımlılıkları kopyala ve kur

@@ -7,9 +7,14 @@
         <h4 class="text-theme-primary fw-bold mb-0">
             <i class="fas fa-users-cog me-2"></i>Bayi Yönetimi (Sahalar)
         </h4>
-        <button class="btn btn-primary btn-sm shadow-sm" onclick="location.reload()">
-            <i class="fas fa-sync-alt me-1"></i>Yenile
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                <i class="fas fa-user-plus me-1"></i>Yeni Kullanıcı Ekle
+            </button>
+            <button class="btn btn-primary btn-sm shadow-sm" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Yenile
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -19,10 +24,12 @@
                     <thead class="bg-light text-muted small text-uppercase">
                         <tr>
                             <th class="ps-4">Bayi / Saha Adı</th>
+                            <th>Limit & Bakiye</th>
+                            <th>Komisyon (%)</th>
+                            <th class="text-center">İzinler (Yat/Çek)</th>
                             <th class="text-center">Aktif IBAN</th>
-                            <th class="text-end">Toplam Yatırım</th>
-                            <th class="text-center">Miktar Düzenleme</th>
-                            <th class="text-center me-4">Hesap Durumu</th>
+                            <th class="text-center">Miktar Düz.</th>
+                            <th class="text-center me-4">Durum</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -30,21 +37,63 @@
                         {% for dealer in dealers %}
                         <tr>
                             <td class="ps-4">
-                                <div class="fw-bold text-dark">{{ dealer.user.username|upper }}</div>
-                                <div class="text-muted x-small">ID: {{ dealer.user.id }}</div>
+                                <div class="fw-bold text-dark fs-6">{{ dealer.user.username|upper }}</div>
+                                <div class="text-muted small">ID: {{ dealer.user.id }}</div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ dealer.net_balance_limit|floatformat:2|intcomma }} ₺ <span class="text-muted small">(Limit)</span></span>
+                                    <span class="text-muted">{{ dealer.current_net_balance|floatformat:2|intcomma }} ₺ <span class="small">(Bakiye)</span></span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1">
+                                    <span class="badge bg-soft-success text-success border border-success-subtle rounded-pill fs-6" title="Yatırım Komisyonu">
+                                        <i class="fas fa-arrow-down me-1"></i>%{{ dealer.deposit_commission_rate }}
+                                    </span>
+                                    <span class="badge bg-soft-danger text-danger border border-danger-subtle rounded-pill fs-6" title="Çekim Komisyonu">
+                                        <i class="fas fa-arrow-up me-1"></i>%{{ dealer.withdraw_commission_rate }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-3">
+                                    <!-- Deposit Permission -->
+                                    {% if dealer.can_receive_deposit %}
+                                        <div class="text-success" title="Yatırım Alabilir" data-bs-toggle="tooltip">
+                                            <i class="fas fa-check-circle fa-xl"></i>
+                                            <div class="small fw-bold mt-1">YAT</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-danger opacity-50" title="Yatırım Kapalı" data-bs-toggle="tooltip">
+                                            <i class="fas fa-times-circle fa-xl"></i>
+                                            <div class="small fw-bold mt-1">YAT</div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Withdraw Permission -->
+                                    {% if dealer.can_make_withdraw %}
+                                        <div class="text-primary" title="Çekim Yapabilir" data-bs-toggle="tooltip">
+                                            <i class="fas fa-check-circle fa-xl"></i>
+                                            <div class="small fw-bold mt-1">ÇEK</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-danger opacity-50" title="Çekim Kapalı" data-bs-toggle="tooltip">
+                                            <i class="fas fa-times-circle fa-xl"></i>
+                                            <div class="small fw-bold mt-1">ÇEK</div>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td class="text-center">
                                 {% if dealer.active_bank_count > 0 %}
-                                    <span class="badge bg-soft-success text-success rounded-pill px-3 fw-bold">{{ dealer.active_bank_count }} Adet</span>
+                                    <span class="badge bg-soft-success text-success rounded-pill px-3 py-2 fw-bold fs-6">{{ dealer.active_bank_count }}</span>
                                 {% else %}
-                                    <span class="badge bg-soft-danger text-danger rounded-pill px-3 fw-bold">0 Adet</span>
+                                    <span class="badge bg-soft-danger text-danger rounded-pill px-3 py-2 fw-bold fs-6">0</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end font-monospace text-success fw-bold">
-                                {{ dealer.total_deposit|default:0|floatformat:2|intcomma }} ₺
-                            </td>
                             <td class="text-center">
-                                <div class="form-check form-switch d-inline-block">
+                                <div class="form-check form-switch d-inline-block" style="transform: scale(1.2);">
                                     <input class="form-check-input permission-toggle" type="checkbox" role="switch"
                                            data-user-id="{{ dealer.user.id }}" 
                                            data-field="can_edit_amounts"
@@ -52,7 +101,7 @@
                                 </div>
                             </td>
                             <td class="text-center me-4">
-                                <div class="form-check form-switch d-inline-block">
+                                <div class="form-check form-switch d-inline-block" style="transform: scale(1.2);">
                                     <input class="form-check-input permission-toggle" type="checkbox" role="switch"
                                            data-user-id="{{ dealer.user.id }}" 
                                            data-field="is_active"
@@ -60,14 +109,19 @@
                                 </div>
                             </td>
                              <td>
-                                <a href="{% url 'dealer-deposits' %}?dealer={{ dealer.id }}&status=ALL" class="btn btn-sm btn-light border" title="İşlemleri Gör">
-                                    <i class="fas fa-search"></i>
-                                </a>
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <button class="btn btn-light border text-primary" onclick="openDealerSettings('{{ dealer.user.id }}')" title="Ayarlar">
+                                        <i class="fas fa-cog fa-lg"></i>
+                                    </button>
+                                    <a href="{% url 'dealer-deposits' %}?dealer={{ dealer.id }}&status=ALL" class="btn btn-light border" title="İşlemleri Gör">
+                                        <i class="fas fa-search fa-lg"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">Kayıtlı saha bulunamadı.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">Kayıtlı saha bulunamadı.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -119,4 +173,229 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Create User Modal (Shared Logic) -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-0 shadow-lg">
+            <div class="modal-header border-bottom border-gray-200 dark:border-gray-700">
+                <h5 class="modal-title fw-bold" id="createUserModalLabel">Yeni Kullanıcı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createUserForm">
+                    <div class="mb-3">
+                        <label for="newUsername" class="form-label text-muted small text-uppercase fw-bold">Kullanıcı Adı (Zorunlu)</label>
+                        <input type="text" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newUsername" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newEmail" class="form-label text-muted small text-uppercase fw-bold">E-posta (Opsiyonel)</label>
+                        <input type="email" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newEmail" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label text-muted small text-uppercase fw-bold">Şifre (Min 8 Karakter)</label>
+                        <input type="password" class="form-control bg-light dark:bg-gray-700 dark:text-white border-0" id="newPassword" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newRole" class="form-label text-muted small text-uppercase fw-bold">Rol (Yetki)</label>
+                        <select class="form-select bg-light dark:bg-gray-700 dark:text-white border-0" id="newRole" name="role" required>
+                            <option value="SUBDEALER" selected>Alt Bayi (Saha/Bayi)</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
+                         <div class="form-text text-muted small mt-1">
+                            "Alt Bayi" seçilirse otomatik olarak Saha Profili oluşturulur.
+                        </div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                            <i class="fas fa-save me-2"></i>Kullanıcıyı Oluştur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('createUserForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>İşleniyor...';
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        fetch('{% url "api-create-user" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json().then(d => ({status: response.status, body: d})))
+        .then(result => {
+            if (result.status === 201) {
+                alert('Başarılı! Kullanıcı oluşturuldu.');
+                window.location.reload();
+            } else {
+                let msg = 'Hata oluştu.';
+                if(result.body) {
+                   if(result.body.detail) msg = result.body.detail;
+                   else if(typeof result.body === 'string') msg = result.body;
+                   else msg = JSON.stringify(result.body);
+                }
+                alert('Hata: ' + msg);
+            }
+        })
+        .catch(err => alert('Ağ Hatası: ' + err))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+</script>
+
+
+<!-- Dealer Settings Modal -->
+<div class="modal fade" id="dealerSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-cogs me-2"></i>Bayi Ayarları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form onsubmit="event.preventDefault(); saveDealerSettings();">
+                    <!-- Limit -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-uppercase small text-muted">Net Bakiye Limiti (Faturalandırma)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-wallet text-secondary"></i></span>
+                            <input type="number" step="0.01" class="form-control" id="conf_net_limit" placeholder="0.00">
+                            <span class="input-group-text">₺</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Commissions -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Yatırım Komisyonu</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">%</span>
+                                <input type="number" step="0.01" class="form-control" id="conf_dep_comm" placeholder="0.0">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Çekim Komisyonu</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">%</span>
+                                <input type="number" step="0.01" class="form-control" id="conf_wd_comm" placeholder="0.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permissions -->
+                    <h6 class="fw-bold text-uppercase small text-muted mb-3 border-bottom pb-2">Yetkiler</h6>
+                    
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="conf_can_dep">
+                        <label class="form-check-label fw-bold" for="conf_can_dep">Yatırım Alabilir (Sistem Açık)</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="conf_can_wd">
+                        <label class="form-check-label fw-bold" for="conf_can_wd">Çekim Yapabilir</label>
+                    </div>
+
+                    <div class="d-grid pt-2">
+                        <button type="submit" class="btn btn-primary rounded-pill fw-bold">
+                            <i class="fas fa-save me-2"></i>Kaydet ve Uygula
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentSettingsUserId = null;
+
+function openDealerSettings(userId) {
+    currentSettingsUserId = userId;
+    fetch(`/api/users/${userId}/config/`, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(res => {
+        if(!res.ok) throw new Error("Veri çekilemedi");
+        return res.json();
+    })
+    .then(data => {
+        document.getElementById('conf_net_limit').value = data.net_balance_limit || 0;
+        document.getElementById('conf_dep_comm').value = data.deposit_commission_rate || 0;
+        document.getElementById('conf_wd_comm').value = data.withdraw_commission_rate || 0;
+        document.getElementById('conf_can_dep').checked = data.can_receive_deposit;
+        document.getElementById('conf_can_wd').checked = data.can_make_withdraw;
+        
+        const modal = new bootstrap.Modal(document.getElementById('dealerSettingsModal'));
+        modal.show();
+    })
+    .catch(err => {
+         Swal.fire('Hata', 'Ayarlar yüklenemedi: ' + err.message, 'error');
+    });
+}
+
+function saveDealerSettings() {
+    if(!currentSettingsUserId) return;
+    
+    // Parse values to Float/Boolean explicitly
+    const netLimit = parseFloat(document.getElementById('conf_net_limit').value) || 0;
+    const depComm = parseFloat(document.getElementById('conf_dep_comm').value) || 0;
+    const wdComm = parseFloat(document.getElementById('conf_wd_comm').value) || 0;
+    
+    const payload = {
+        net_balance_limit: netLimit,
+        deposit_commission_rate: depComm,
+        withdraw_commission_rate: wdComm,
+        can_receive_deposit: document.getElementById('conf_can_dep').checked,
+        can_make_withdraw: document.getElementById('conf_can_wd').checked
+    };
+    
+    console.log("Sending Payload:", payload); // Debug for User
+
+    fetch(`/api/users/${currentSettingsUserId}/config/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => {
+        if(!res.ok) {
+             return res.json().then(d => { throw new Error(JSON.stringify(d)) });
+        }
+        return res.json();
+    })
+    .then(data => {
+        Swal.fire('Başarılı', `Ayarlar kaydedildi. (Limit: ${data.net_balance_limit})`, 'success').then(() => {
+             const modalEl = document.getElementById('dealerSettingsModal');
+             const modal = bootstrap.Modal.getInstance(modalEl);
+             modal.hide();
+             location.reload(); 
+        });
+    })
+    .catch(err => {
+        console.error("Save Error:", err);
+        Swal.fire('Hata', err.message, 'error');
+    });
+}
+</script>
+
 {% endblock %}

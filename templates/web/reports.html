@@ -57,9 +57,29 @@
              <button class="btn btn-primary-custom btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCardFilters">
                 <i class="fas fa-filter me-2"></i>{% trans "Filtrele" %}
             </button>
-            <a href="{% url 'export-reports-csv' %}?{{ current_params }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">
-                <i class="fas fa-file-csv me-2"></i>{% trans "CSV İndir" %}
-            </a>
+            <div class="dropdown">
+                <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-2"></i>{% trans "İndir" %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><h6 class="dropdown-header text-uppercase small fw-bold">Format Seçin</h6></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'export-reports-csv' %}?{{ current_params }}&format=pdf">
+                            <i class="far fa-file-pdf me-2 text-danger"></i>PDF
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'export-reports-csv' %}?{{ current_params }}&format=xlsx">
+                            <i class="far fa-file-excel me-2 text-success"></i>Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'export-reports-csv' %}?{{ current_params }}&format=csv">
+                            <i class="fas fa-file-csv me-2 text-primary"></i>CSV
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 

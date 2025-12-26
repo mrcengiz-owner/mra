@@ -36,17 +36,32 @@ class APIClientAdmin(admin.ModelAdmin):
     )
 from decimal import Decimal
 
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
     list_display = ('username', 'email', 'role', 'is_staff')
     list_filter = ('role', 'is_staff')
-    fieldsets = UserAdmin.fieldsets + (
-        ('Role Info', {'fields': ('role',)}),
+    
+    # Kullanıcı Düzenleme Ekranı (Edit)
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email', 'role')}),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+        }),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
-    add_fieldsets = UserAdmin.add_fieldsets + (
+
+    # Kullanıcı Ekleme Ekranı (Add)
+    # Varsayılan UserCreationForm 'username', 'password', 'password_2' alanlarını içerir.
+    # Biz de 'email' ve 'role' ekledik. Bunları burada göstermeliyiz.
+    add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'role'),
+            'fields': ('username', 'email', 'role', 'password_1', 'password_2'),
         }),
     )
     actions = ['reset_2fa_device']

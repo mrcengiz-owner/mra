@@ -42,7 +42,7 @@ from django.contrib.auth.decorators import user_passes_test
 from .models import CustomUser
 import json
 
-@method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
+@method_decorator(user_passes_test(lambda u: u.is_authenticated and (u.is_superuser or u.role == CustomUser.Roles.ADMIN)), name='dispatch')
 class ToggleDealerStatusView(View):
     def post(self, request):
         try:

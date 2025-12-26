@@ -28,7 +28,7 @@
                         <div class="form-check form-switch">
                             <input class="form-check-input cursor-pointer" type="checkbox" role="switch" 
                                    id="switch-{{ bank.id }}"
-                                   onchange="toggleBankStatus('{{ bank.id }}', '{% url 'toggle-bank-status' %}')"
+                                   onchange="toggleBankStatus('{{ bank.id }}', '{% url 'admin-toggle-bank-status' %}')"
                                    {% if bank.is_active %}checked{% endif %}>
                         </div>
                     </div>

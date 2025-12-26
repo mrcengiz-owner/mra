@@ -26,8 +26,16 @@ class SubDealerProfile(models.Model):
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text="Percentage commission, e.g. 2.50")
     net_balance_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     current_net_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    # New Commission Fields
+    deposit_commission_rate = models.FloatField(default=0.0, verbose_name="Yatırım Komisyonu (%)")
+    withdraw_commission_rate = models.FloatField(default=0.0, verbose_name="Çekim Komisyonu (%)")
+    
+    # Permissions
     is_active_by_system = models.BooleanField(default=True, help_text="Automatically set to False if limit is reached")
     can_edit_amounts = models.BooleanField(default=False, verbose_name="Miktar Düzenleyebilir mi?")
+    can_receive_deposit = models.BooleanField(default=True, verbose_name="Yatırım Alabilir mi?")
+    can_make_withdraw = models.BooleanField(default=True, verbose_name="Çekim Yapabilir mi?")
     api_key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     class Meta:

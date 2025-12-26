@@ -5,13 +5,13 @@ from .views import (
     SubDealerDashboardView,    ReportsPageView, export_reports_csv,
     DepositsListView, TransactionActionView, ManualAdjustmentView, GlobalSettingsView, WithdrawalsListView,
     AdminDealerAnalyticsView, CommissionReportView, AdminWithdrawalPoolView, AssignWithdrawalView, ReturnToPoolView, AuditLogListView, ToggleUserStatusView,
-    AdminBankListView, UpdateTransactionAmountView, RejectPoolWithdrawalView
+    AdminBankListView, UpdateTransactionAmountView, RejectPoolWithdrawalView, UserListView, admin_toggle_bank_status
 )
 from .views_dealer import (
     DealerDepositListView, DealerWithdrawalListView, DealerTransactionUpdateView, 
     DealerBankAccountListView, DealerBankAccountCreateView, DealerBankAccountUpdateView, DealerReportView, DealerTransactionActionView, toggle_bank_status
 )
-from .api_views import CreateWithdrawalAPIView, DepositRequestAPIView, DepositConfirmAPIView, WithdrawRequestAPIView
+from .api_views import CreateWithdrawalAPIView, DepositRequestAPIView, DepositConfirmAPIView, WithdrawRequestAPIView, ToggleUserStatusAPIView
 from finance.views import BlacklistManagerView, AllDealersListView, UpdateDealerPermissionsView, get_dashboard_stats
 from accounts.views import ToggleDealerStatusView
 from django.views.decorators.csrf import csrf_exempt
@@ -27,6 +27,7 @@ urlpatterns = [
     
     # Admin Panel
     path('web/admin-dashboard/', SuperAdminDashboardView.as_view(), name='admin-dashboard'),
+    path('web/users/', UserListView.as_view(), name='user-list'),
     path('web/admin-panel/deposits/', DepositsListView.as_view(), name='admin-deposits'),
     path('web/admin-panel/withdrawals/', WithdrawalsListView.as_view(), name='admin-withdrawals'),
     # ... other admin paths
@@ -100,4 +101,6 @@ urlpatterns = [
     path('admin-panel/all-dealers/', AllDealersListView.as_view(), name='admin-all-dealers'),
     path('api/management/update-dealer-permission/', UpdateDealerPermissionsView.as_view(), name='update-dealer-permissions'),
     path('api/dashboard-stats/', get_dashboard_stats, name='dashboard_stats'),
+    path('api/user/<int:pk>/toggle-status/', ToggleUserStatusAPIView.as_view(), name='api-toggle-user-status'),
+    path('api/admin/toggle-bank/', admin_toggle_bank_status, name='admin-toggle-bank-status'),
 ]

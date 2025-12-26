@@ -12,6 +12,9 @@ from accounts.utils import log_action
 from finance.utils import send_notification
 import logging
 
+from api.authentication import ApiKeyAuthentication
+from rest_framework.permissions import AllowAny
+
 logger = logging.getLogger(__name__)
 
 class WithdrawRequestAPIView(APIView):

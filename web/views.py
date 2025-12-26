@@ -26,7 +26,7 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
     def get_success_url(self):
         user = self.request.user
-        if user.is_superadmin():
+        if user.is_superadmin() or user.role == CustomUser.Roles.ADMIN:
             return '/web/admin-dashboard/'
         elif user.is_subdealer():
             return '/web/dealer-dashboard/'
@@ -34,7 +34,7 @@ class CustomLoginView(LoginView):
 
 class DashboardRedirectView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
-        if request.user.is_superadmin():
+        if request.user.is_superadmin() or request.user.role == CustomUser.Roles.ADMIN:
             return redirect('admin-dashboard')
         elif request.user.is_subdealer():
             return redirect('dealer-dashboard')
@@ -44,7 +44,8 @@ class SuperAdminDashboardView(UserPassesTestMixin, TemplateView):
     template_name = 'web/admin_dashboard.html'
 
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        u = self.request.user
+        return u.is_authenticated and (u.is_superadmin() or u.role == CustomUser.Roles.ADMIN)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

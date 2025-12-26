@@ -1,25 +1,24 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.conf import settings
+from accounts.models import APIClient
 from django.contrib.auth.models import AnonymousUser
 
 class ApiKeyAuthentication(BaseAuthentication):
     """
-    Custom Authentication class for API Key.
-    Reads 'X-API-KEY' from the header.
-    Validates against settings.MY_SECRET_API_KEY.
+    Database-backed API Key Authentication.
+    Reads 'X-API-KEY' from header.
+    Validates against accounts.models.APIClient.
     """
     def authenticate(self, request):
         api_key = request.META.get('HTTP_X_API_KEY')
         if not api_key:
-            return None  # No API Key provided
+            return None  # Pass to next auth class (if any)
 
-        # Validate against Static Key from settings
-        if api_key == getattr(settings, 'MY_SECRET_API_KEY', None):
-             # Successful Auth
-             # Return AnonymousUser (so manual login isn't triggered) 
-             # and the api_key as the 'auth' object
-             return (AnonymousUser(), api_key)
+        try:
+            # Query the database for the key
+            client = APIClient.objects.get(api_key=api_key, is_active=True)
+        except APIClient.DoesNotExist:
+            raise AuthenticationFailed('Invalid API Key')
         
-        # If key is present but wrong
-        raise AuthenticationFailed('Invalid API Key')
+        # Return AnonymousUser as user, and client object as auth
+        return (AnonymousUser(), client)

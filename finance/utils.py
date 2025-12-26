@@ -54,8 +54,14 @@ def send_transaction_webhook(transaction):
     # Or maybe the user didn't specify where it's stored.
     # "Client's Callback URL" implies per-client.
     
-    # I'll try to fetch it from profile if dynamic, else default.
-    callback_url = getattr(transaction.sub_dealer, 'webhook_url', 'http://localhost:8000/mock-webhook/') 
+    # Prioritize transaction-specific callback, then dealer profile, then default
+    callback_url = transaction.callback_url 
+    if not callback_url and transaction.sub_dealer and hasattr(transaction.sub_dealer, 'webhook_url'):
+         callback_url = transaction.sub_dealer.webhook_url
+    
+    if not callback_url:
+        # Fallback / Debug
+        callback_url = 'http://localhost:8000/mock-webhook/' 
     
     data = {
         "transaction_id": transaction.id,

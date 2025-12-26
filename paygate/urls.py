@@ -37,7 +37,29 @@ from accounts.views import FixedSetupView
 from web.api_views import DepositRequestAPIView, WithdrawRequestAPIView, DepositConfirmAPIView
 from django.views.decorators.csrf import csrf_exempt
 
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="NexKasa API",
+      default_version='v1',
+      description="Public API Documentation for NexKasa Payment Gateway",
+      terms_of_service="https://www.nexkasa.com/terms/",
+      contact=openapi.Contact(email="support@nexkasa.com"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
+
 urlpatterns = [
+    # Swagger / Redoc
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+
     path('', LoginView.as_view(template_name='two_factor/core/login.html'), name='login'),
     # Custom View - Standart olanı eziyoruz
     path('account/two_factor/setup/', FixedSetupView.as_view(), name='setup'),

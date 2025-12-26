@@ -19,8 +19,8 @@ class WithdrawRequestAPIView(APIView):
     Public API for external systems to request withdrawals.
     Transactions are placed in a 'Pool' for Admin assignment.
     """
-    authentication_classes = []
-    permission_classes = []
+    authentication_classes = [ApiKeyAuthentication]
+    permission_classes = [AllowAny]
     throttle_scope = 'withdraw'
 
     def get(self, request, format=None):
@@ -76,7 +76,9 @@ class WithdrawRequestAPIView(APIView):
                         amount=serializer.validated_data['amount'],
                         external_user_id=external_id_val,
                         target_iban=serializer.validated_data['customer_iban'],
-                        target_name=serializer.validated_data['customer_name']
+                        target_name=serializer.validated_data['customer_name'],
+                        callback_url=serializer.validated_data.get('callback_url'),
+                        api_client=request.auth if hasattr(request, 'auth') and request.auth else None
                     )
                 
                 # Push Notification (To Admin)

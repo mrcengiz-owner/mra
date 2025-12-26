@@ -6,6 +6,7 @@ class WithdrawalRequestSerializer(serializers.Serializer):
     customer_iban = serializers.CharField(max_length=34, required=True)
     customer_name = serializers.CharField(max_length=255, required=True)
     external_id = serializers.CharField(max_length=100, required=True)
+    callback_url = serializers.URLField(required=False, allow_blank=True)
 
     def validate_amount(self, value):
         if value <= 0:

@@ -39,6 +39,7 @@ def send_transaction_callback(sender, instance, created, **kwargs):
         'external_id': instance.external_user_id,
         'status': new_status,
         'amount': float(instance.amount),
+        'type': instance.transaction_type,
         'processed_at': str(instance.processed_at) if instance.processed_at else None,
         'message': instance.rejection_reason if new_status == Transaction.Status.REJECTED else "Success"
     }

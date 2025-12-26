@@ -105,6 +105,12 @@ class SubDealerDashboardView(UserPassesTestMixin, TemplateView):
     def test_func(self):
         return self.request.user.is_authenticated and self.request.user.is_subdealer()
 
+    def dispatch(self, request, *args, **kwargs):
+        if not hasattr(request.user, 'profile'):
+             messages.error(request, "Hesap profili bulunamadı. Lütfen yönetici ile iletişime geçin.")
+             return redirect('logout')
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         profile = self.request.user.profile

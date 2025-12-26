@@ -23,6 +23,12 @@ class WithdrawRequestAPIView(APIView):
     permission_classes = []
     throttle_scope = 'withdraw'
 
+    def get(self, request, format=None):
+        return Response({
+            "status": "active",
+            "message": "Withdrawal API is active. Please use POST to create a request."
+        })
+
     def post(self, request, format=None):
         from finance.models import Transaction, Blacklist
         from .utils import is_blacklisted, get_client_ip
@@ -107,6 +113,12 @@ class DepositRequestAPIView(APIView):
     authentication_classes = [ApiKeyAuthentication]
     permission_classes = [AllowAny]
     throttle_scope = 'deposit'
+
+    def get(self, request, format=None):
+        return Response({
+            "status": "active",
+            "message": "Deposit API is active. Please use POST to create a request."
+        })
 
     def post(self, request, format=None):
         from .api_serializers import DepositRequestSerializer

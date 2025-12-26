@@ -35,11 +35,11 @@ def send_transaction_callback(sender, instance, created, **kwargs):
         return
 
     payload = {
-        'transaction_id': instance.external_user_id or str(instance.id),
-        'internal_id': instance.id,
+        'transaction_id': instance.id,
+        'external_id': instance.external_user_id,
         'status': new_status,
         'amount': float(instance.amount),
-        'currency': 'TRY',
+        'processed_at': str(instance.processed_at) if instance.processed_at else None,
         'message': instance.rejection_reason if new_status == Transaction.Status.REJECTED else "Success"
     }
 

@@ -97,7 +97,7 @@ class Transaction(models.Model):
     target_iban = models.CharField(max_length=34, null=True, blank=True, help_text="Target IBAN for withdrawals", verbose_name="Hedef IBAN")
     target_name = models.CharField(max_length=255, null=True, blank=True, help_text="Target Account Holder Name", verbose_name="Hedef Ad Soyad")
     external_user_id = models.CharField(max_length=100, help_text="User ID from external system", verbose_name="Harici Kullanıcı ID")
-    callback_url = models.URLField(null=True, blank=True, verbose_name="Callback URL", help_text="Notification URL for status updates")
+    callback_url = models.URLField(max_length=500, null=True, blank=True, verbose_name="Callback URL", help_text="Notification URL for status updates")
     sender_full_name = models.CharField(max_length=255, null=True, blank=True, verbose_name="Gönderen Adı Soyadı")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
     processed_at = models.DateTimeField(null=True, blank=True, verbose_name="İşlem Tarihi")

@@ -166,8 +166,8 @@ class ReportsPageView(UserPassesTestMixin, FilterView):
     context_object_name = 'transactions'
     
     def test_func(self):
-        # Allow both SuperAdmin and SubDealer (with restricted data)
-        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.is_subdealer())
+        # Allow SuperAdmin, Admin and SubDealer (with restricted data)
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN or self.request.user.is_subdealer())
 
     def get_queryset(self):
         qs = Transaction.objects.all().order_by('-created_at')
@@ -272,7 +272,7 @@ class DepositsListView(UserPassesTestMixin, ListView):
     context_object_name = 'transactions'
     
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
     
     def get_queryset(self):
         qs = Transaction.objects.filter(transaction_type=Transaction.TransactionType.DEPOSIT)
@@ -307,7 +307,7 @@ class DepositsListView(UserPassesTestMixin, ListView):
 
 class TransactionActionView(UserPassesTestMixin, View):
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def post(self, request, pk, action):
         tx = get_object_or_404(Transaction, pk=pk)
@@ -411,7 +411,7 @@ class WithdrawalsListView(UserPassesTestMixin, ListView):
     context_object_name = 'transactions'
     
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
     
     def get_queryset(self):
         qs = Transaction.objects.filter(transaction_type=Transaction.TransactionType.WITHDRAW)
@@ -453,7 +453,7 @@ class ManualAdjustmentView(UserPassesTestMixin, FormView):
     success_url = reverse_lazy('manual-adjustment')
 
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+        return self.request.user.is_authenticated and (self.request.user.is_superadmin() or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def form_valid(self, form):
         dealer = form.cleaned_data['dealer']
@@ -785,7 +785,7 @@ class ToggleUserStatusView(UserPassesTestMixin, View):
     Accessible by Staff users (Operational Admins) and Superadmins.
     """
     def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_staff
+        return self.request.user.is_authenticated and (self.request.user.is_staff or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def post(self, request):
         user_id = request.POST.get('user_id')
@@ -820,7 +820,7 @@ class AdminBankListView(UserPassesTestMixin, ListView):
     context_object_name = 'banks'
 
     def test_func(self):
-        return self.request.user.is_authenticated and (self.request.user.is_staff or self.request.user.is_superuser)
+        return self.request.user.is_authenticated and (self.request.user.is_staff or self.request.user.is_superuser or self.request.user.role == CustomUser.Roles.ADMIN)
 
     def get_queryset(self):
         # Show all banks, ordered by bank name
@@ -833,7 +833,7 @@ class UpdateTransactionAmountView(UserPassesTestMixin, View):
     """
     def test_func(self):
         u = self.request.user
-        return u.is_authenticated and (u.is_superuser or u.is_staff or u.is_subdealer())
+        return u.is_authenticated and (u.is_superuser or u.is_staff or u.is_subdealer() or u.role == CustomUser.Roles.ADMIN)
 
     def post(self, request):
         # 1. Permission Check: Can this user edit amounts?

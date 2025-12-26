@@ -3,6 +3,9 @@ from django.dispatch import receiver
 from finance.models import Transaction
 import requests
 import logging
+import hmac
+import hashlib
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +22,12 @@ def store_previous_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Transaction)
 def send_transaction_callback(sender, instance, created, **kwargs):
-    # Check if status changed
     old_status = getattr(instance, '_old_status', None)
     new_status = instance.status
 
     if old_status == new_status:
         return
 
-    # User requested: Trigger when status changes (e.g. to APPROVED or REJECTED)
-    # We primarily care about final states, but strict change detection is good.
     if new_status not in [Transaction.Status.APPROVED, Transaction.Status.REJECTED]:
         return
 
@@ -43,9 +43,17 @@ def send_transaction_callback(sender, instance, created, **kwargs):
         'message': instance.rejection_reason if new_status == Transaction.Status.REJECTED else "Success"
     }
 
+    headers = {'Content-Type': 'application/json'}
+    body = json.dumps(payload)
+
+    # Security: Sign Request
+    if instance.api_client and instance.api_client.webhook_secret:
+        secret = instance.api_client.webhook_secret.encode('utf-8')
+        signature = hmac.new(secret, body.encode('utf-8'), hashlib.sha256).hexdigest()
+        headers['X-NexKasa-Signature'] = signature
+
     try:
-        # Timeout 5 seconds as requested
-        response = requests.post(instance.callback_url, json=payload, timeout=5)
+        response = requests.post(instance.callback_url, data=body, headers=headers, timeout=5)
         logger.info(f"Callback sent for Tx #{instance.id} to {instance.callback_url}. Status: {response.status_code}")
     except Exception as e:
         logger.error(f"Callback failed for Tx #{instance.id}: {e}")

@@ -119,13 +119,16 @@ class APIClient(models.Model):
     name = models.CharField(max_length=100, verbose_name="Müşteri Adı")
     api_key = models.CharField(max_length=64, unique=True, blank=True, verbose_name="API Key")
     allowed_ips = models.TextField(default="127.0.0.1", help_text="Virgülle ayrılmış IP listesi", verbose_name="İzinli IP'ler")
+    webhook_secret = models.CharField(max_length=64, blank=True, verbose_name="Webhook Secret")
     is_active = models.BooleanField(default=True, verbose_name="Aktif mi?")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        import secrets
         if not self.api_key:
-            import secrets
             self.api_key = secrets.token_hex(32) # Generate 64 char hex string
+        if not self.webhook_secret:
+            self.webhook_secret = secrets.token_hex(32)
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -17,13 +17,13 @@ class AuditLogAdmin(admin.ModelAdmin):
 
 @admin.register(APIClient)
 class APIClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'api_key', 'is_active', 'created_at')
+    list_display = ('name', 'api_key', 'webhook_secret', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('name', 'api_key')
-    readonly_fields = ('api_key', 'created_at')
+    readonly_fields = ('api_key', 'webhook_secret', 'created_at')
     fieldsets = (
         (None, {
-            'fields': ('name', 'api_key', 'is_active')
+            'fields': ('name', 'api_key', 'webhook_secret', 'is_active')
         }),
         ('Security', {
             'fields': ('allowed_ips',),

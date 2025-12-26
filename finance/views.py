@@ -16,6 +16,7 @@ from django.contrib import messages
 from datetime import timedelta
 from django.utils import timezone
 from decimal import Decimal
+from accounts.models import CustomUser
 
 class BlacklistManagerView(UserPassesTestMixin, ListView):
     model = Blacklist
@@ -24,7 +25,7 @@ class BlacklistManagerView(UserPassesTestMixin, ListView):
     ordering = ['-created_at']
 
     def test_func(self):
-        return self.request.user.is_superuser
+        return self.request.user.is_superuser or self.request.user.role == CustomUser.Roles.ADMIN
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
@@ -121,7 +122,7 @@ class AllDealersListView(UserPassesTestMixin, ListView):
     context_object_name = 'dealers'
 
     def test_func(self):
-        return self.request.user.is_superuser
+        return self.request.user.is_superuser or self.request.user.role == CustomUser.Roles.ADMIN
 
     def get_queryset(self):
         # Calculate active bank count using related_name 'bank_accounts'
@@ -133,7 +134,7 @@ class AllDealersListView(UserPassesTestMixin, ListView):
 
 class UpdateDealerPermissionsView(UserPassesTestMixin, View):
     def test_func(self):
-        return self.request.user.is_superuser
+        return self.request.user.is_superuser or self.request.user.role == CustomUser.Roles.ADMIN
 
     def post(self, request):
         user_id = request.POST.get('user_id')

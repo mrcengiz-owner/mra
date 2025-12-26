@@ -198,6 +198,7 @@ class DepositRequestAPIView(APIView):
                     external_user_id=user_id_val,
                     sender_full_name=full_name,
                     callback_url=callback_url,
+                    api_client=request.auth if hasattr(request, 'auth') and request.auth else None,
                     description=f"Depositor: {full_name}"
                 )
 

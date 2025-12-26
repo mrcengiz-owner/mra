@@ -348,6 +348,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
 ] + [url for url in env_origins if url]
+LOGIN_REDIRECT_URL = 'dashboard-redirect'
 
 # Static API Key for Public Endpoints
 MY_SECRET_API_KEY = 'a78c75e4899fb3026135a373bde44c36dabd1bb7012a6fc190c3d8'

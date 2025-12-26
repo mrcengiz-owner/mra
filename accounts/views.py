@@ -32,7 +32,8 @@ class FixedSetupView(SetupView):
         return context
 
     def get_success_url(self):
-        return '/web/dealer-dashboard/'
+        from django.urls import reverse
+        return reverse('dashboard-redirect')
 
 from django.views import View
 from django.http import JsonResponse

@@ -19,7 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 urlpatterns = [
 
     # Add logout with next_page
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
     path('', CustomLoginView.as_view(template_name='web/login.html'), name='login'),
     # Dashboard Redirect

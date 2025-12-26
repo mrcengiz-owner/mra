@@ -119,7 +119,7 @@ class APIClient(models.Model):
     name = models.CharField(max_length=100, verbose_name="Müşteri Adı")
     api_key = models.CharField(max_length=64, unique=True, blank=True, verbose_name="API Key")
     allowed_ips = models.TextField(default="127.0.0.1", help_text="Virgülle ayrılmış IP listesi", verbose_name="İzinli IP'ler")
-    webhook_secret = models.CharField(max_length=64, blank=True, verbose_name="Webhook Secret")
+    webhook_secret = models.CharField(max_length=64, blank=True, editable=False, verbose_name="Webhook Secret")
     is_active = models.BooleanField(default=True, verbose_name="Aktif mi?")
     created_at = models.DateTimeField(auto_now_add=True)
 

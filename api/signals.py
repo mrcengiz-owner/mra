@@ -44,7 +44,8 @@ def send_transaction_callback(sender, instance, created, **kwargs):
     }
 
     headers = {'Content-Type': 'application/json'}
-    body = json.dumps(payload)
+    # Sort keys for deterministic signature
+    body = json.dumps(payload, sort_keys=True)
 
     # Security: Sign Request
     if instance.api_client and instance.api_client.webhook_secret:

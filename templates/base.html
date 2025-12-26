@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}PayGate{% endblock %}</title>
+    <title>{% block title %}NexKasa{% endblock %}</title>
     
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -15,6 +15,9 @@
     
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
     
     <style>
         /* 1. AKILLI RENK PALETİ */
@@ -338,7 +341,7 @@
     <nav class="sidebar" id="sidebar">
         <!-- Brand -->
         <div class="sidebar-brand">
-            <i class="fas fa-layer-group me-3 text-primary"></i> <span style="background: var(--primary-gradient); -webkit-background-clip: text; color: transparent;">PayGate</span>
+            <i class="fas fa-layer-group me-3 text-primary"></i> <span style="background: var(--primary-gradient); -webkit-background-clip: text; color: transparent;">NexKasa</span>
         </div>
         
         <!-- Menu -->
@@ -354,7 +357,7 @@
                  </div>
                  <div style="line-height: 1.25;">
                      <div class="fw-bold fs-6">{{ user.username }}</div>
-                     <span class="badge bg-soft-primary px-2 py-0 align-middle" style="font-size: 0.65rem;">{{ user.role }}</span>
+                     <span class="badge bg-soft-primary px-2 py-0 align-middle" style="font-size: 0.65rem;">{{ user.get_role_display }}</span>
                  </div>
             </div>
         </div>
@@ -601,6 +604,69 @@
                         icon: 'success',
                         title: 'Reddedildi!',
                         text: result.value.message || 'İşlem başarıyla reddedildi.',
+                        background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
+                        color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674'
+                    }).then(() => location.reload());
+                }
+            })
+        }
+
+        // Approve Transaction with Amount Check (SweetAlert2)
+        function approveTransaction(id, url, currentAmount) {
+            Swal.fire({
+                title: 'Yatırımı Onayla',
+                input: 'text',
+                inputLabel: 'Onaylanacak Tutar',
+                inputValue: currentAmount,
+                inputPlaceholder: 'Örn: 1000.00',
+                showCancelButton: true,
+                confirmButtonText: 'Onayla',
+                confirmButtonColor: '#10b981',
+                cancelButtonText: 'İptal',
+                showLoaderOnConfirm: true,
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674',
+                preConfirm: (amount) => {
+                    if (!amount) {
+                         Swal.showValidationMessage('Lütfen bir tutar girin!')
+                         return false;
+                    }
+                    // Basic validation
+                    const cleanAmount = amount.toString().replace(',', '.');
+                    if (isNaN(cleanAmount) || parseFloat(cleanAmount) <= 0) {
+                        Swal.showValidationMessage('Geçersiz tutar!');
+                        return false;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('amount', cleanAmount);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    return fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(response.statusText)
+                        }
+                        // If redirect happens (standard Django behavior), we might need to reload or follow
+                        return response; 
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(`İşlem başarısız: ${error}`)
+                    })
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Onaylandı!',
+                        text: 'İşlem başarıyla onaylandı.',
                         background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#111c44' : '#fff',
                         color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#2b3674'
                     }).then(() => location.reload());

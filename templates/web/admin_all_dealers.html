@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-theme-primary fw-bold mb-0">
+            <i class="fas fa-users-cog me-2"></i>Bayi Yönetimi (Sahalar)
+        </h4>
+        <button class="btn btn-primary btn-sm shadow-sm" onclick="location.reload()">
+            <i class="fas fa-sync-alt me-1"></i>Yenile
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="bg-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Bayi / Saha Adı</th>
+                            <th class="text-center">Aktif IBAN</th>
+                            <th class="text-end">Toplam Yatırım</th>
+                            <th class="text-center">Miktar Düzenleme</th>
+                            <th class="text-center me-4">Hesap Durumu</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dealer in dealers %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ dealer.user.username|upper }}</div>
+                                <div class="text-muted x-small">ID: {{ dealer.user.id }}</div>
+                            </td>
+                            <td class="text-center">
+                                {% if dealer.active_bank_count > 0 %}
+                                    <span class="badge bg-soft-success text-success rounded-pill px-3 fw-bold">{{ dealer.active_bank_count }} Adet</span>
+                                {% else %}
+                                    <span class="badge bg-soft-danger text-danger rounded-pill px-3 fw-bold">0 Adet</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end font-monospace text-success fw-bold">
+                                {{ dealer.total_deposit|default:0|floatformat:2|intcomma }} ₺
+                            </td>
+                            <td class="text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input permission-toggle" type="checkbox" role="switch"
+                                           data-user-id="{{ dealer.user.id }}" 
+                                           data-field="can_edit_amounts"
+                                           {% if dealer.can_edit_amounts %}checked{% endif %}>
+                                </div>
+                            </td>
+                            <td class="text-center me-4">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input permission-toggle" type="checkbox" role="switch"
+                                           data-user-id="{{ dealer.user.id }}" 
+                                           data-field="is_active"
+                                           {% if dealer.user.is_active %}checked{% endif %}>
+                                </div>
+                            </td>
+                             <td>
+                                <a href="{% url 'dealer-deposits' %}?dealer={{ dealer.id }}&status=ALL" class="btn btn-sm btn-light border" title="İşlemleri Gör">
+                                    <i class="fas fa-search"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Kayıtlı saha bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.permission-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            const field = this.getAttribute('data-field');
+            const isChecked = this.checked;
+            
+            // Revert immediately if we want to confirm, but for UX 'toggle' is usually instant.
+            // We'll show a toast.
+            
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('field_name', field);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch('{% url "update-dealer-permissions" %}', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const Toast = Swal.mixin({
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true
+                    });
+                    Toast.fire({ icon: 'success', title: 'Yetki Güncellendi' });
+                } else {
+                    Swal.fire('Hata', data.message, 'error');
+                    this.checked = !isChecked; // Revert
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Hata', 'Sunucu hatası', 'error');
+                this.checked = !isChecked; // Revert
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

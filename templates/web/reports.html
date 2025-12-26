@@ -128,7 +128,7 @@
         <div class="col-xl-3 col-md-6 mb-4">
              <div class="card card-stat bg-gradient-info h-100">
                 <div class="card-body p-4">
-                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Net Akış</h6>
+                     <h6 class="text-uppercase ls-1 text-white opacity-75 mb-2" style="font-size: 0.75rem;">Net Kasa</h6>
                      <h2 class="mb-0 fw-bold text-white display-6">{{ net_flow|default:0|floatformat:2|intcomma }} ₺</h2>
                      <div class="icon-box">
                         <i class="fas fa-balance-scale fa-3x"></i>
@@ -165,11 +165,13 @@
                             <thead class="sticky-top bg-white">
                                 <tr>
                                     <th>ID</th>
-                                    <th>{% trans "Tarih" %}</th>
-                                    <th>{% trans "Bayi" %}</th>
-                                    <th>{% trans "Tip" %}</th>
-                                    <th>{% trans "Durum" %}</th>
-                                    <th class="text-end">{% trans "Tutar" %}</th>
+                                    <th>{% trans "İŞLEM TİPİ" %}</th>
+                                    <th>{% trans "BAYİ / KULLANICI" %}</th>
+                                    <th>{% trans "TUTAR" %}</th>
+                                    <th>{% trans "DETAY / KAYNAK" %}</th>
+                                    <th>{% trans "Tarih/Saat" %}</th>
+                                    <th>{% trans "DURUM" %}</th>
+                                    <th class="text-end">{% trans "AKSİYON" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,35 +179,116 @@
                                 <tr>
                                     <td><span class="text-muted small">#{{ tx.id }}</span></td>
                                     <td>
-                                        <div class="fw-medium">{{ tx.created_at|date:"d M" }}</div>
-                                        <small class="text-muted">{{ tx.created_at|date:"H:i" }}</small>
-                                    </td>
-                                    <td class="fw-bold text-primary">{{ tx.sub_dealer.user.username }}</td>
-                                    <td>
                                         {% if tx.transaction_type == 'DEPOSIT' %}
-                                        <span class="badge badge-soft-success">YATIRIM</span>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-gradient-success me-2 rounded-circle d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                                                <i class="fas fa-arrow-down text-white"></i>
+                                            </div>
+                                            <span class="fw-bold text-success">YATIRIM</span>
+                                        </div>
                                         {% elif tx.transaction_type == 'WITHDRAW' %}
-                                        <span class="badge badge-soft-danger">ÇEKİM</span>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-gradient-danger me-2 rounded-circle d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                                                <i class="fas fa-arrow-up text-white"></i>
+                                            </div>
+                                            <span class="fw-bold text-danger">ÇEKİM</span>
+                                        </div>
                                         {% else %}
-                                        <span class="badge badge-soft-primary">{{ tx.transaction_type }}</span>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-primary-subtle me-2 rounded-circle d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                                                <i class="fas fa-cog text-primary"></i>
+                                            </div>
+                                            <span class="fw-bold text-primary">MANUEL</span>
+                                        </div>
                                         {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-light text-primary me-2 rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:32px; height:32px;">
+                                                {{ tx.sub_dealer.user.username|make_list|first|upper }}
+                                            </div>
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold text-dark">{{ tx.sub_dealer.user.username }}</span>
+                                                <small class="text-muted">Bayi</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="fw-bold font-monospace fs-6 text-dark">
+                                        {{ tx.amount|floatformat:2|intcomma }} ₺
+                                    </td>
+                                    <td>
+                                        {% if tx.transaction_type == 'MANUAL_CREDIT' or tx.transaction_type == 'MANUAL_DEBIT' %}
+                                            <div class="d-flex flex-column">
+                                                {% if tx.category %}
+                                                    {% if tx.transaction_type == 'MANUAL_CREDIT' %}
+                                                        <span class="badge bg-soft-primary text-primary fw-bold mb-1 w-auto align-self-start border border-primary-subtle">
+                                                            {{ tx.get_category_display }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-soft-warning text-warning fw-bold mb-1 w-auto align-self-start border border-warning-subtle">
+                                                             {{ tx.get_category_display }}
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                   <span class="badge bg-soft-secondary text-secondary fw-bold mb-1 w-auto align-self-start">Manuel İşlem</span>
+                                                {% endif %}
+                                    
+                                                {% if tx.description %}
+                                                <small class="text-muted fst-italic" style="font-size: 0.8rem; line-height: 1.2;">
+                                                    {{ tx.description|truncatechars:50 }}
+                                                </small>
+                                                {% endif %}
+                                                
+                                                {% if tx.processed_by %}
+                                                <div class="mt-1 small text-primary" style="font-size: 0.75rem;">
+                                                    <i class="fas fa-user-check me-1 opacity-50"></i> {{ tx.processed_by.username }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        {% elif tx.bank_account %}
+                                        <div class="d-flex align-items-center">
+                                             <div class="me-2 text-primary opacity-75">
+                                                 <i class="{{ tx.bank_account.bank_icon_class|default:'fas fa-university' }} fa-lg"></i>
+                                             </div>
+                                             <div class="d-flex flex-column">
+                                                <span class="fw-bold text-dark fs-7">{{ tx.bank_account.bank_name }}</span>
+                                                <small class="text-muted font-monospace" style="font-size: 0.75rem;">
+                                                    {{ tx.bank_account.formatted_iban|default:tx.bank_account.iban }}
+                                                </small>
+                                             </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark fs-7">{{ tx.created_at|date:"d M Y" }}</span>
+                                            <small class="text-muted">{{ tx.created_at|date:"H:i" }}</small>
+                                        </div>
                                     </td>
                                     <td>
                                         {% if tx.status == 'APPROVED' %}
-                                        <i class="fas fa-check-circle text-success" title="Onaylandı"></i>
+                                            <span class="badge badge-soft-success rounded-pill px-3">
+                                                <i class="fas fa-check-circle me-1"></i> ONAYLANDI
+                                            </span>
                                         {% elif tx.status == 'PENDING' %}
-                                        <i class="fas fa-clock text-warning" title="Bekliyor"></i>
+                                            <span class="badge badge-soft-warning rounded-pill px-3">
+                                                <i class="fas fa-clock me-1"></i> BEKLİYOR
+                                            </span>
                                         {% elif tx.status == 'REJECTED' %}
-                                        <i class="fas fa-times-circle text-danger" title="Reddedildi"></i>
+                                            <span class="badge badge-soft-danger rounded-pill px-3 position-relative" data-bs-toggle="tooltip" data-bs-placement="top" title="Sebebi: {{ tx.rejection_reason|default:'Belirtilmemiş' }}">
+                                                <i class="fas fa-times-circle me-1"></i> REDDEDİLDİ
+                                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px;"></span>
+                                            </span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-end fw-bold font-monospace fs-6">
-                                        {{ tx.amount|floatformat:2|intcomma }} ₺
+                                    <td class="text-end">
                                         {% if user.is_superadmin and tx.status == 'REJECTED' %}
-                                        <form action="{% url 'transaction-action' tx.id 'requeue' %}" method="POST" class="d-inline ms-2" onsubmit="return confirm('Bu işlemi tekrar bekleyenlere almak istiyor musunuz?');">
+                                        <form action="{% url 'transaction-action' tx.id 'requeue' %}" method="POST" class="d-inline" onsubmit="return confirm('Bu işlemi tekrar bekleyenlere almak istiyor musunuz?');">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-light border rounded-circle" style="width: 24px; height: 24px; padding: 0;" title="Tekrar İşleme Al">
-                                                <i class="fas fa-undo fa-xs text-warning"></i>
+                                            <button type="submit" class="btn btn-icon btn-light btn-sm text-warning" data-bs-toggle="tooltip" title="Tekrar İşleme Al">
+                                                <i class="fas fa-undo"></i>
                                             </button>
                                         </form>
                                         {% endif %}
@@ -213,10 +296,10 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-5">
-                                        <div class="text-muted">
-                                            <i class="fas fa-inbox fa-2x mb-2 opacity-25"></i>
-                                            <p class="mb-0">Veri bulunamadı.</p>
+                                    <td colspan="8" class="text-center py-5">
+                                        <div class="text-muted opacity-50">
+                                            <i class="fas fa-search-dollar fa-3x mb-3"></i>
+                                            <p class="mb-0">Kriterlere uygun işlem bulunamadı.</p>
                                         </div>
                                     </td>
                                 </tr>

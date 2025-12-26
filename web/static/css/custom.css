@@ -1,0 +1,262 @@
+/* Compact UI Overrides */
+body {
+    font-size: 0.85rem !important;
+}
+
+/* Compact Cards */
+.card {
+    margin-bottom: 1rem !important;
+}
+
+.card-body {
+    padding: 1rem !important;
+}
+
+/* Compact Tables */
+.table td,
+.table th {
+    padding: 0.4rem 0.5rem !important;
+    vertical-align: middle;
+}
+
+/* Compact Buttons */
+.btn {
+    padding: 0.25rem 0.6rem !important;
+    font-size: 0.8rem !important;
+}
+
+/* Compact Forms */
+.form-control,
+.form-select {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.85rem !important;
+    min-height: calc(1.5em + 0.6rem + 2px) !important;
+}
+
+/* Sidebar Density */
+.nav-link {
+    padding: 0.5rem 1rem !important;
+}
+
+/* Custom Badges */
+.badge-dealer {
+    background-color: #4e73df;
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+}
+
+/* === NEXKASA GLOBAL DARK MODE FIX === */
+
+[data-bs-theme="dark"] {
+
+    /* 1. BADGE DÜZELTMELERİ */
+    .badge-light-success,
+    .bg-soft-success {
+        background-color: rgba(80, 205, 137, 0.15) !important;
+        color: #50cd89 !important;
+        border: 1px solid rgba(80, 205, 137, 0.2);
+    }
+
+    .badge-light-danger,
+    .bg-soft-danger {
+        background-color: rgba(241, 65, 108, 0.15) !important;
+        color: #f1416c !important;
+        border: 1px solid rgba(241, 65, 108, 0.2);
+    }
+
+    .badge-light-warning,
+    .bg-soft-warning {
+        background-color: rgba(255, 199, 0, 0.15) !important;
+        color: #ffc700 !important;
+        border: 1px solid rgba(255, 199, 0, 0.2);
+    }
+
+    .badge-light-primary,
+    .bg-soft-primary {
+        background-color: rgba(0, 158, 247, 0.15) !important;
+        color: #009ef7 !important;
+        border: 1px solid rgba(0, 158, 247, 0.2);
+    }
+
+    .badge-light-info,
+    .bg-soft-info {
+        background-color: rgba(114, 57, 234, 0.15) !important;
+        color: #7239ea !important;
+        border: 1px solid rgba(114, 57, 234, 0.2);
+    }
+
+    .badge-light-secondary,
+    .bg-soft-secondary {
+        background-color: rgba(228, 230, 239, 0.1) !important;
+        color: #a1a5b7 !important;
+        border: 1px solid rgba(228, 230, 239, 0.1);
+    }
+
+    /* 2. BEYAZ KAPSÜL VE INPUT DÜZELTMELERİ */
+    /* Tablo içindeki beyaz arka planlı elemanları koyulaştır */
+    .table .bg-white,
+    .table .bg-light {
+        background-color: #1b1b29 !important;
+        color: #ffffff !important;
+    }
+
+    .form-control,
+    .form-select,
+    .input-group-text {
+        background-color: #1b1b29 !important;
+        border-color: #323248 !important;
+        color: #ffffff !important;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background-color: #1b1b29 !important;
+        border-color: #009ef7 !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+    }
+
+    .form-control::placeholder {
+        color: #565674 !important;
+    }
+
+    /* 3. KOMİSYON BALONCUKLARI VE GENEL TABLE FIX */
+    .rounded-pill.bg-white {
+        background-color: #2b2b40 !important;
+        color: #e4e6ef !important;
+        border: 1px solid #323248;
+    }
+
+    /* Table Rows */
+    .table {
+        color: #cdcdde !important;
+        --bs-table-bg: transparent !important;
+        --bs-table-striped-bg: rgba(255, 255, 255, 0.02) !important;
+        --bs-table-hover-bg: rgba(255, 255, 255, 0.05) !important;
+        border-color: #2b2b40 !important;
+    }
+
+    .table td,
+    .table th {
+        border-bottom-color: #2b2b40 !important;
+    }
+
+
+    /* Card Headers in Dark Mode */
+    .card-header,
+    .card-footer {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        border-color: #2b2b40 !important;
+    }
+}
+
+/* =============================================== */
+/* NEXKASA DARK MODE HARD OVERRIDE (CSS PATCH v2) */
+/* =============================================== */
+
+/* 1. İnatçı Beyaz Arkaplanları Ez */
+html[data-bs-theme="dark"] .bg-white,
+html[data-bs-theme="dark"] .bg-light,
+html[data-bs-theme="dark"] .card.bg-white {
+    background-color: #1e1e2d !important;
+    color: #ffffff !important;
+    border-color: #323248 !important;
+}
+
+/* 2. Form Elemanlarını (Input/Select) Düzelt */
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] input {
+    background-color: #151521 !important;
+    border: 1px solid #323248 !important;
+    color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .form-control:focus,
+html[data-bs-theme="dark"] .form-select:focus {
+    background-color: #1b1b29 !important;
+    border-color: #50cd89 !important;
+    /* Odaklanınca Yeşil */
+    box-shadow: 0 0 0 0.25rem rgba(80, 205, 137, 0.25) !important;
+    color: #fff !important;
+}
+
+/* 3. Komisyon ve Yuvarlak Alanlar (O Beyaz Haplar) */
+html[data-bs-theme="dark"] .rounded-pill,
+html[data-bs-theme="dark"] .badge-white {
+    background-color: #2b2b40 !important;
+    color: #ffffff !important;
+    border: 1px solid #323248 !important;
+}
+
+/* 4. Tablo Çizgilerini Düzelt (Table Striped) */
+html[data-bs-theme="dark"] .table-striped>tbody>tr:nth-of-type(odd)>* {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    /* Çok hafif beyazlık */
+    color: #fff !important;
+}
+
+html[data-bs-theme="dark"] .table> :not(caption)>*>* {
+    background-color: transparent !important;
+    /* Hücre arkaplanını temizle */
+}
+
+/* 5. Badge Renklerini Parlat (Neon Efekt) */
+html[data-bs-theme="dark"] .badge-light-success,
+html[data-bs-theme="dark"] .bg-soft-success {
+    background-color: rgba(80, 205, 137, 0.2) !important;
+    color: #50cd89 !important;
+}
+
+html[data-bs-theme="dark"] .badge-light-danger,
+html[data-bs-theme="dark"] .bg-soft-danger {
+    background-color: rgba(241, 65, 108, 0.2) !important;
+    color: #f1416c !important;
+}
+
+html[data-bs-theme="dark"] .badge-light-primary,
+html[data-bs-theme="dark"] .bg-soft-primary {
+    background-color: rgba(0, 158, 247, 0.2) !important;
+    color: #009ef7 !important;
+}
+
+html[data-bs-theme="dark"] .badge-light-warning,
+html[data-bs-theme="dark"] .bg-soft-warning {
+    background-color: rgba(255, 199, 0, 0.2) !important;
+    color: #ffc700 !important;
+}
+
+/* 6. Chrome Otomatik Doldurma (Sarı Arkaplanı Yok Et) */
+html[data-bs-theme="dark"] input:-webkit-autofill,
+html[data-bs-theme="dark"] input:-webkit-autofill:hover,
+html[data-bs-theme="dark"] input:-webkit-autofill:focus,
+html[data-bs-theme="dark"] input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #151521 inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* DASHBOARD KART DÜZENLEMESİ */
+.dashboard-amount {
+    font-size: clamp(1.65rem, 2.75vw, 2.5rem) !important;
+    letter-spacing: -0.5px;
+    font-weight: 800 !important;
+}
+
+.card-stat {
+    min-height: 155px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-stat .card-body {
+    padding: 1.5rem !important;
+}
+
+/* Başlık fontunu ayarlama */
+.card-stat h6 {
+    font-size: 0.85rem !important;
+    opacity: 0.9 !important;
+    letter-spacing: 0.5px !important;
+}

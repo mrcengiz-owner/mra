@@ -5,17 +5,27 @@
 {% block page_title %}Panelim{% endblock %}
 
 {% block content %}
+<!-- Filter Buttons -->
+<div class="d-flex justify-content-end mb-3">
+    <div class="btn-group shadow-sm" role="group">
+        <button type="button" class="btn btn-white border active" onclick="updateStats('all', this)">Tümü</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('daily', this)">Bugün</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('weekly', this)">Bu Hafta</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('monthly', this)">Bu Ay</button>
+    </div>
+</div>
+
 <div class="row g-4 mb-4">
     <!-- Total Deposit (Green Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #059669 0%, #34d399 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Yatırım (Brüt)</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_deposit|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-arrow-down fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Yatırım (Brüt)</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-deposit">{{ total_deposit|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-arrow-down fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -24,13 +34,13 @@
     <!-- Total Withdrawal (Red Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Çekim</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_withdraw|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-arrow-up fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Çekim</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-withdraw">{{ total_withdraw|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-arrow-up fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -39,13 +49,13 @@
     <!-- Total Commission (Orange/Warning Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Komisyon</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-percent fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Komisyon</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-commission">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-percent fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -54,13 +64,13 @@
     <!-- Net Balance (Blue Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Net Değişim</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ period_net|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-wallet fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Net Kasa</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-net">{{ period_net|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-wallet fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -149,9 +159,37 @@
     </div>
 </div>
 
+<script>
+    function updateStats(period, btn) {
+        // Update Active State
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        
+        fetch(`{% url 'dashboard_stats' %}?period=${period}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const fmt = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                document.getElementById('stat-deposit').innerText = fmt.format(data.total_deposit) + ' ₺';
+                document.getElementById('stat-withdraw').innerText = fmt.format(data.total_withdraw) + ' ₺';
+                document.getElementById('stat-commission').innerText = fmt.format(data.total_commission) + ' ₺';
+                document.getElementById('stat-net').innerText = fmt.format(data.net_balance) + ' ₺';
+            }
+        });
+    }
+</script>
+
 <style>
     .card-stat { border-radius: 16px; border: none; overflow: hidden; transition: transform 0.2s; }
     .card-stat:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
     .text-white-50 { color: rgba(255,255,255,0.7) !important; }
+    
+    .btn-group .btn-white.active {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+        font-weight: bold;
+        color: var(--theme-primary);
+    }
 </style>
 {% endblock %}

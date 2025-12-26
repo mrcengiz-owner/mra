@@ -116,7 +116,7 @@
                     <thead>
                         <tr>
                             <th class="ps-4">Tarih</th>
-                            <th>İşlem Tipi</th>
+                            <th>İşlem Tipi / Detay</th>
                             <th>Miktar</th>
                             <th>Komisyon</th>
                             <th>Net Miktar</th>
@@ -131,9 +131,31 @@
                                 <div class="small text-primary fw-bold font-monospace">{{ tx.created_at|date:"H:i:s" }}</div>
                             </td>
                             <td>
+                                {% if tx.transaction_type == 'MANUAL_CREDIT' or tx.transaction_type == 'MANUAL_DEBIT' %}
+                                    <div class="d-flex flex-column">
+                                        {% if tx.category %}
+                                            {% if tx.transaction_type == 'MANUAL_CREDIT' %}
+                                                <span class="badge bg-soft-primary text-primary fw-bold mb-1 w-auto align-self-start border border-primary-subtle">
+                                                    {{ tx.get_category_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-soft-warning text-warning fw-bold mb-1 w-auto align-self-start border border-warning-subtle">
+                                                     {{ tx.get_category_display }}
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                           <span class="badge bg-soft-secondary text-secondary fw-bold mb-1 w-auto align-self-start">Manuel İşlem</span>
+                                        {% endif %}
+                                        
+                                        {% if tx.description %}
+                                        <span class="text-muted fst-italic x-small mt-1" style="max-width: 200px; white-space: normal; line-height: 1.2;">{{ tx.description }}</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
                                 <span class="badge bg-light text-theme-primary border">
                                     {{ tx.get_transaction_type_display }}
                                 </span>
+                                {% endif %}
                             </td>
                             <td class="fw-bold {% if tx.transaction_type == 'DEPOSIT' or tx.transaction_type == 'MANUAL_CREDIT' %}text-success{% else %}text-danger{% endif %} font-monospace">
                                 {{ tx.amount|floatformat:2|intcomma }} ₺

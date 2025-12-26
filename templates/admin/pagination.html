@@ -1,0 +1,55 @@
+{% load admin_list %}
+{% load i18n %}
+
+<div class="card-footer">
+    <div class="row">
+        <div class="col-12 col-sm-12 col-md-5 d-flex align-items-center justify-content-between">
+            <span class="text-muted">
+                {{ cl.result_count }} {% if cl.result_count == 1 %}{% trans "entry" %}{% else %}{% trans "entries" %}{% endif %}
+                &nbsp;|&nbsp;
+                <a href class="showall">{% trans 'Show all' %}</a>
+            </span>
+        </div>
+
+        <div class="col-12 col-sm-12 col-md-7">
+            <ul class="pagination pagination-sm m-0 float-right float-md-end">
+                {% if cl.page_num > 0 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ cl.get_query_string }}&p=0">
+                            &laquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                {% endif %}
+
+                {% for i in cl.paginator.page_range %}
+                    {% if i == cl.page_num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ i|add:1 }}</span>
+                        </li>
+                    {% else %}
+                        {# Basit bir logic: Çok fazla sayfa varsa hepsini gösterme (Örnek) #}
+                         <li class="page-item">
+                            <a class="page-link" href="?{{ cl.get_query_string }}&p={{ i }}">{{ i|add:1 }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if cl.page_num < cl.paginator.num_pages|add:"-1" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ cl.get_query_string }}&p={{ cl.paginator.num_pages|add:"-1" }}">
+                            &raquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>

@@ -5,11 +5,19 @@ from .models import BankAccount, Transaction, SystemConfig
 
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'is_maintenance_mode', 'global_deposit_limit')
-    list_editable = ('is_maintenance_mode', 'global_deposit_limit')
+    list_display = ('__str__', 'is_maintenance_mode', 'allow_withdrawals', 'global_deposit_limit')
+    list_editable = ('is_maintenance_mode', 'allow_withdrawals', 'global_deposit_limit')
 
     def has_add_permission(self, request):
         return not SystemConfig.objects.exists()
+
+from .models import Blacklist
+
+@admin.register(Blacklist)
+class BlacklistAdmin(admin.ModelAdmin):
+    list_display = ('type', 'value', 'reason', 'is_active', 'created_at')
+    list_filter = ('type', 'is_active')
+    search_fields = ('value', 'reason')
 
 @admin.register(BankAccount)
 class BankAccountAdmin(admin.ModelAdmin):

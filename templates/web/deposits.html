@@ -94,8 +94,18 @@
                                 <div class="x-small text-muted">Komisyon: {{ tx.commission_amount|floatformat:2|intcomma }} ₺</div>
                             </td>
                             <td>
-                                <div class="small fw-medium">{{ tx.bank_account.bank_name }}</div>
-                                <div class="x-small text-muted font-monospace">{{ tx.bank_account.iban|truncatechars:18 }}</div>
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 d-none d-lg-block">
+                                        <span class="symbol-label bg-light-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-university fs-5 {{ tx.bank_account.bank_icon_class }}"></i>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-start flex-column">
+                                        <span class="text-dark fw-bolder fs-6 d-block">{{ tx.bank_account.bank_name }}</span>
+                                        <span class="text-muted fw-bold d-block x-small">{{ tx.bank_account.account_holder }}</span>
+                                        <span class="text-secondary d-block x-small font-monospace opacity-75">{{ tx.bank_account.formatted_iban }}</span>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 <div class="small">{{ tx.created_at|date:"d M Y" }}</div>
@@ -129,12 +139,12 @@
                             <td class="text-end">
                                 {% if tx.status == 'PENDING' %}
                                 <div class="d-flex justify-content-end gap-1">
-                                    <form action="{% url 'transaction-action' tx.id 'approve' %}" method="POST" onsubmit="return confirm('İşlemi onaylamak istediğinize emin misiniz?')">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm">
-                                            <i class="fas fa-check"></i> Onayla
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-info rounded-pill px-3 shadow-sm text-white" onclick="editAmount('{{ tx.id }}', '{{ tx.amount|stringformat:'f' }}')">
+                                        <i class="fas fa-edit"></i> Düzenle
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm" onclick="confirmApprove('{{ tx.id }}', '{% url 'transaction-action' tx.id 'approve' %}', '{{ tx.sender_full_name }}', '{{ tx.amount|floatformat:2|intcomma }}')">
+                                        <i class="fas fa-check"></i> Onayla
+                                    </button>
                                     <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm" onclick="rejectTransaction('{{ tx.id }}', '{% url 'transaction-action' tx.id 'reject' %}')">
                                         <i class="fas fa-times"></i> Reddet
                                     </button>
@@ -216,5 +226,120 @@
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
     })
+
+    function editAmount(id, currentAmount) {
+        Swal.fire({
+            title: 'Tutar Düzenle',
+            input: 'text',
+            inputValue: currentAmount,
+            inputLabel: 'Yeni Tutar (TL)',
+            showCancelButton: true,
+            confirmButtonText: 'Güncelle',
+            cancelButtonText: 'İptal',
+            showLoaderOnConfirm: true,
+            preConfirm: (amount) => {
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('amount', amount);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                return fetch('{% url "transaction-update-amount" %}', {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    body: formData
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || response.statusText)
+                    }
+                    return response.json()
+                })
+                .then(data => {
+                    if (data.status === 'error') {
+                        throw new Error(data.message)
+                    }
+                    return data
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(`Hata: ${error}`)
+                })
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Güncellendi!',
+                    text: `Yeni Tutar: ${result.value.new_amount} TL`,
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => location.reload());
+            }
+        })
+    }
+
+    function confirmApprove(id, url, name, amount) {
+        Swal.fire({
+            title: 'Yatırımı Onayla',
+            html: `<strong>${name}</strong> kullanıcısının <br><span class="text-success fs-4 fw-bold">${amount} TL</span><br>yatırımını onaylıyor musunuz?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Evet, Onayla',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Determine if we need to call API or submit a form
+                // Here we construct a temporary form to submit properly with CSRF
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        })
+    }
+    
+    function rejectTransaction(id, url) {
+        Swal.fire({
+            title: 'Ret Sebebi',
+            input: 'textarea',
+            inputPlaceholder: 'Neden reddediyorsunuz?',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Reddet',
+            cancelButtonText: 'Vazgeç'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                 const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                const reasonInput = document.createElement('input');
+                reasonInput.type = 'hidden';
+                reasonInput.name = 'reason';
+                reasonInput.value = result.value;
+                form.appendChild(reasonInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
 </script>
 {% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-theme-primary fw-bold mb-0">
+            <i class="fas fa-university me-2"></i>Tüm Banka Hesapları
+        </h4>
+        <div class="text-muted small">
+            Toplam: <strong>{{ banks.count }}</strong> Hesap
+        </div>
+    </div>
+
+    <!-- Grid Layout -->
+    <div class="row g-3">
+        {% for bank in banks %}
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm hover-elevate transition-all">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <!-- Dealer Badge (Top Right) -->
+                        <span class="badge badge-dealer shadow-sm">
+                            <i class="fas fa-user-shield me-1"></i>{{ bank.sub_dealer.user.username }}
+                        </span>
+                        
+                        <!-- Active/Passive Switch -->
+                        <div class="form-check form-switch">
+                            <input class="form-check-input cursor-pointer" type="checkbox" role="switch" 
+                                   id="switch-{{ bank.id }}"
+                                   onchange="toggleBankStatus('{{ bank.id }}', '{% url 'toggle-bank-status' %}')"
+                                   {% if bank.is_active %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar avatar-md bg-light rounded-circle d-flex align-items-center justify-content-center me-3 text-primary">
+                            <i class="fas fa-university fa-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">{{ bank.bank_name }}</h6>
+                            <small class="text-muted small text-uppercase">{{ bank.account_holder }}</small>
+                        </div>
+                    </div>
+
+                    <div class="bg-light rounded p-2 text-center mb-3 border border-dashed">
+                        <div class="font-monospace fw-bold text-primary small user-select-all" onclick="copyToClipboard(this)">
+                            {{ bank.iban }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between text-muted x-small">
+                        <span><i class="fas fa-arrow-down me-1"></i>Min: {{ bank.min_deposit_limit }} ₺</span>
+                        <span><i class="fas fa-arrow-up me-1"></i>Max: {{ bank.max_deposit_limit }} ₺</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 pt-0 pb-3">
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-folder-open fa-3x text-muted opacity-25 mb-3"></i>
+            <p class="text-muted">Kayıtlı banka hesabı bulunamadı.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function toggleBankStatus(bankId, url) {
+    const formData = new FormData();
+    formData.append('pk', bankId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'success',
+                title: data.message
+            });
+        } else {
+            Swal.fire('Hata', data.message, 'error');
+            // Revert switch if failed
+            document.getElementById('switch-' + bankId).checked = !document.getElementById('switch-' + bankId).checked;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Hata', 'Bir hata oluştu', 'error');
+    });
+}
+</script>
+
+<style>
+/* Custom Badge for Dealer */
+.badge-dealer {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    color: white;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+.hover-elevate:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+.transition-all {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

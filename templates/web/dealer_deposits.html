@@ -80,7 +80,7 @@
                             <th class="ps-4">ID</th>
                             <th>GÖNDEREN</th>
                             <th>MİKTAR</th>
-                            <th>BANKA</th>
+                            <th>İŞLEM DETAYI</th>
                             <th>TARİH</th>
                             <th>HARİCİ ID</th>
                             <th>DURUM</th>
@@ -96,7 +96,41 @@
                             </td>
                             <td class="fw-bold text-success font-monospace">+{{ tx.amount|floatformat:2|intcomma }} ₺</td>
                             <td>
-                                <div class="fw-medium small text-uppercase">{{ tx.bank_account.bank_name }}</div>
+                                {% if tx.transaction_type == 'MANUAL_CREDIT' or tx.transaction_type == 'MANUAL_DEBIT' %}
+                                    <div class="d-flex justify-content-start flex-column">
+                                        {% if tx.category %}
+                                            {% if tx.transaction_type == 'MANUAL_CREDIT' %}
+                                                <span class="badge bg-soft-primary text-primary fw-bold mb-1 w-auto align-self-start border border-primary-subtle">
+                                                    {{ tx.get_category_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-soft-warning text-warning fw-bold mb-1 w-auto align-self-start border border-warning-subtle">
+                                                     {{ tx.get_category_display }}
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                           <span class="badge bg-soft-secondary text-secondary fw-bold mb-1 w-auto align-self-start">Manuel İşlem</span>
+                                        {% endif %}
+                                        
+                                        {% if tx.description %}
+                                        <span class="text-muted fst-italic x-small">{{ tx.description|truncatechars:60 }}</span>
+                                        {% endif %}
+                                         <span class="text-primary x-small fw-bold mt-1 opacity-75">Yönetici Müdahalesi</span>
+                                    </div>
+                                {% else %}
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 d-none d-lg-block">
+                                        <span class="symbol-label bg-light-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-university fs-5 {{ tx.bank_account.bank_icon_class }}"></i>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-start flex-column">
+                                        <span class="text-dark fw-bolder fs-6 d-block">{{ tx.bank_account.bank_name }}</span>
+                                        <span class="text-muted fw-bold d-block x-small">{{ tx.bank_account.account_holder }}</span>
+                                        <span class="text-secondary d-block x-small font-monospace opacity-75">{{ tx.bank_account.formatted_iban }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="small fw-medium text-muted">{{ tx.created_at|date:"d.m.Y" }}</div>
@@ -120,17 +154,14 @@
                             <td class="text-end pe-4">
                                 {% if tx.status == 'PENDING' %}
                                 <div class="d-flex justify-content-end gap-2">
-                                    <form action="{% url 'dealer-transaction-action' tx.id 'approve' %}" method="POST" class="d-inline" onsubmit="return confirm('Bu yatırımı onaylıyor musunuz?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-soft-success fw-bold px-3 py-2">
-                                            <i class="fas fa-check me-1"></i> Onayla
-                                        </button>
-                                    </form>
-                                    
-                                    <a href="{% url 'dealer-transaction-update' tx.id %}" class="btn btn-sm btn-soft-warning fw-bold px-3 py-2 text-decoration-none">
+                                    <button type="button" class="btn btn-sm btn-soft-warning fw-bold px-3 py-2" onclick="editAmount('{{ tx.id }}', '{{ tx.amount|stringformat:'f' }}')">
                                         <i class="fas fa-pencil-alt me-1"></i> Düzelt
-                                    </a>
+                                    </button>
 
+                                    <button type="button" class="btn btn-sm btn-soft-success fw-bold px-3 py-2" onclick="confirmApprove('{{ tx.id }}', '{% url 'dealer-transaction-action' tx.id 'approve' %}', '{{ tx.sender_full_name }}', '{{ tx.amount|floatformat:2|intcomma }}')">
+                                        <i class="fas fa-check me-1"></i> Onayla
+                                    </button>
+                                    
                                     <button type="button" class="btn btn-sm btn-soft-danger fw-bold px-3 py-2" onclick="rejectTransaction('{{ tx.id }}', '{% url 'dealer-transaction-action' tx.id 'reject' %}')">
                                         <i class="fas fa-times me-1"></i> Reddet
                                     </button>
@@ -154,4 +185,119 @@
         </div>
     </div>
 </div>
+
+<script>
+    function editAmount(id, currentAmount) {
+        Swal.fire({
+            title: 'Tutar Düzenle',
+            input: 'text',
+            inputValue: currentAmount,
+            inputLabel: 'Yeni Tutar (TL)',
+            showCancelButton: true,
+            confirmButtonText: 'Güncelle',
+            cancelButtonText: 'İptal',
+            showLoaderOnConfirm: true,
+            preConfirm: (amount) => {
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('amount', amount);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                return fetch('{% url "transaction-update-amount" %}', {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    body: formData
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || response.statusText)
+                    }
+                    return response.json()
+                })
+                .then(data => {
+                    if (data.status === 'error') {
+                        throw new Error(data.message)
+                    }
+                    return data
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(`Hata: ${error}`)
+                })
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Güncellendi!',
+                    text: `Yeni Tutar: ${result.value.new_amount} TL`,
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => location.reload());
+            }
+        })
+    }
+
+    function confirmApprove(id, url, name, amount) {
+        Swal.fire({
+            title: 'Yatırımı Onayla',
+            html: `<strong>${name}</strong> yatırımı için <br><span class="text-success fs-4 fw-bold">${amount} TL</span><br> onaylıyor musunuz?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Evet, Onayla',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        })
+    }
+    
+    function rejectTransaction(id, url) {
+        Swal.fire({
+            title: 'Ret Sebebi',
+            input: 'textarea',
+            inputPlaceholder: 'Neden reddediyorsunuz?',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Reddet',
+            cancelButtonText: 'Vazgeç'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                 const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                const reasonInput = document.createElement('input');
+                reasonInput.type = 'hidden';
+                reasonInput.name = 'reason';
+                reasonInput.value = result.value;
+                form.appendChild(reasonInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-theme-primary fw-bold mb-0">
+            <i class="fas fa-ban me-2"></i>Kara Liste Yönetimi
+        </h4>
+        <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#addBanModal">
+            <i class="fas fa-plus me-1"></i>Yeni Ekle
+        </button>
+    </div>
+
+    <!-- Alert for Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show p-2 small" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close p-2" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="bg-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-3 w-5">#ID</th>
+                            <th>Tip</th>
+                            <th>Değer</th>
+                            <th>Sebep</th>
+                            <th>Tarih</th>
+                            <th class="text-end pe-3">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in blacklist_items %}
+                        <tr>
+                            <td class="ps-3 text-muted small">{{ item.id }}</td>
+                            <td>
+                                {% if item.type == 'IP' %}
+                                    <span class="badge bg-info text-dark">IP</span>
+                                {% elif item.type == 'IBAN' %}
+                                    <span class="badge bg-warning text-dark">IBAN</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">USER ID</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-monospace small text-dark fw-bold">{{ item.value }}</td>
+                            <td class="text-muted small text-truncate" style="max-width: 200px;">
+                                {{ item.reason|default:"-" }}
+                            </td>
+                            <td class="text-muted x-small">
+                                {{ item.created_at|date:"d.m.Y H:i" }}
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" role="switch" 
+                                           id="switch-{{ item.id }}"
+                                           onchange="toggleBan('{{ item.id }}')"
+                                           {% if item.is_active %}checked{% endif %}>
+                                </div>
+                                <button class="btn btn-link text-danger p-0 ms-2" onclick="deleteBan('{{ item.id }}')" title="Sil">
+                                    <i class="fas fa-trash-alt small"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted small">
+                                <i class="fas fa-check-circle text-success mb-2"></i><br>
+                                Kara liste temiz.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addBanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h6 class="modal-title fw-bold text-danger">Yeni Yasak Ekle</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Tip</label>
+                        <select class="form-select form-select-sm" name="type" required>
+                            <option value="IP">IP Adresi</option>
+                            <option value="IBAN">IBAN</option>
+                            <option value="USER_ID">Kullanıcı ID (External)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Değer</label>
+                        <input type="text" class="form-control form-control-sm" name="value" placeholder="Örn: 192.168.1.1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Sebep</label>
+                        <textarea class="form-control form-control-sm" name="reason" rows="2" placeholder="Neden engelliyorsunuz?"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger btn-sm w-100">Engelle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleBan(id) {
+    const formData = new FormData();
+    formData.append('item_id', id);
+    formData.append('action', 'toggle');
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            // Toast
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 2000
+            });
+            Toast.fire({ icon: 'success', title: 'Güncellendi' });
+        } else {
+            Swal.fire('Hata', data.message, 'error');
+            // Revert
+            let el = document.getElementById('switch-' + id);
+            el.checked = !el.checked;
+        }
+    });
+}
+
+function deleteBan(id) {
+    Swal.fire({
+        title: 'Emin misiniz?',
+        text: "Bu kayıt kalıcı olarak silinecek.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Evet, Sil'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('item_id', id);
+            formData.append('action', 'delete');
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch(window.location.href, { method: 'POST', body: formData })
+            .then(() => location.reload());
+        }
+    })
+}
+</script>
+{% endblock %}

@@ -11,7 +11,7 @@ class CustomUser(AbstractUser):
     class Roles(models.TextChoices):
         SUPERADMIN = 'SUPERADMIN', 'Super Admin'
         ADMIN = 'ADMIN', 'Admin'
-        SUBDEALER = 'SUBDEALER', 'Sub Dealer'
+        SUBDEALER = 'SUBDEALER', 'Alt Bayi'
 
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.SUBDEALER)
 
@@ -27,7 +27,12 @@ class SubDealerProfile(models.Model):
     net_balance_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     current_net_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     is_active_by_system = models.BooleanField(default=True, help_text="Automatically set to False if limit is reached")
+    can_edit_amounts = models.BooleanField(default=False, verbose_name="Miktar Düzenleyebilir mi?")
     api_key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
+    class Meta:
+        verbose_name = "Alt Bayi"
+        verbose_name_plural = "Alt Bayiler (Sahalar)"
 
     def __str__(self):
         return f"{self.user.username} - Balance: {self.current_net_balance}/{self.net_balance_limit}"

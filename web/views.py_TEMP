@@ -1,0 +1,17 @@
+
+class BaseAdminReportView(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Base view for Admin Reports.
+    Allows access to Superusers, Staff, and users with ADMIN/SUPERADMIN roles.
+    """
+    def test_func(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return False
+            
+        # Check for multiple permission levels
+        return (
+            user.is_superuser or 
+            user.is_staff or 
+            getattr(user, 'role', '') in ['SUPERADMIN', 'ADMIN']
+        )

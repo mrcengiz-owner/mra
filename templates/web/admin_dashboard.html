@@ -5,18 +5,28 @@
 {% block page_title %}{% trans "Yönetim Paneli" %}{% endblock %}
 
 {% block content %}
-<!-- Dashboard Grid -->
+<!-- Filter Buttons -->
+<div class="d-flex justify-content-end mb-3">
+    <div class="btn-group shadow-sm" role="group">
+        <button type="button" class="btn btn-white border active" onclick="updateStats('all', this)">Tümü</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('daily', this)">Bugün</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('weekly', this)">Bu Hafta</button>
+        <button type="button" class="btn btn-white border" onclick="updateStats('monthly', this)">Bu Ay</button>
+    </div>
+</div>
+
+<!-- Dashboard Grid (IDs added for JS) -->
 <div class="row g-4 mb-4">
     <!-- 1. Total Deposit (Green Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #059669 0%, #34d399 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Yatırım (Brüt)</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_volume_in|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-arrow-down fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Yatırım (Brüt)</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-deposit">{{ total_volume_in|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-arrow-down fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -25,13 +35,13 @@
     <!-- 2. Total Withdrawal (Red Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Çekim</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_volume_out|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-arrow-up fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Çekim</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-withdraw">{{ total_volume_out|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-arrow-up fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -40,13 +50,13 @@
     <!-- 3. Total Commission (Warning/Orange Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Toplam Komisyon</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-percent fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Toplam Komisyon</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-commission">{{ total_commission|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-percent fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -55,13 +65,13 @@
     <!-- 4. Net Balance (Blue Gradient) -->
     <div class="col-md-3">
         <div class="card card-stat h-100" style="background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Net Kasa (Üretilen)</h6>
-                    <h2 class="fw-bold mb-0 display-6">{{ net_balance|default:0|floatformat:2|intcomma }} ₺</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-wallet fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Net Kasa (Üretilen)</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1" id="stat-net">{{ net_balance|default:0|floatformat:2|intcomma }} ₺</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-wallet fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -70,13 +80,13 @@
     <!-- 5. Active Dealers (Purple Gradient) -->
     <div class="col-12 mt-4">
         <div class="card card-stat" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div class="text-white">
-                    <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1">Sistemdeki Aktif Bayi Sayısı</h6>
-                    <h2 class="fw-bold mb-0">{{ active_dealer_count }} Bayi</h2>
-                </div>
-                <div class="icon-box-static text-white opacity-25">
-                    <i class="fas fa-users fa-3x"></i>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <h6 class="text-uppercase fw-bold text-white-50 opacity-75 small mb-2 ls-1 text-nowrap">Sistemdeki Aktif Bayi Sayısı</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-bolder mb-0 dashboard-amount text-white text-nowrap lh-1">{{ active_dealer_count }} Bayi</span>
+                    <div class="text-white opacity-25 ms-2">
+                        <i class="fas fa-users fa-3x"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -145,9 +155,13 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <a href="/admin/accounts/subdealerprofile/{{ dealer.id }}/change/" class="btn btn-sm btn-light border rounded-pill" target="_blank">
-                            <i class="fas fa-cog text-muted"></i>
-                        </a>
+                        <div class="form-check form-switch form-check-custom form-check-solid d-flex justify-content-end">
+                            <input class="form-check-input h-20px w-30px toggle-dealer-status" 
+                                   style="cursor: pointer;"
+                                   type="checkbox" 
+                                   data-id="{{ dealer.user.id }}" 
+                                   {% if dealer.user.is_active %}checked{% endif %} />
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -164,6 +178,72 @@
         </table>
     </div>
 </div>
+
+<script>
+    function updateStats(period, btn) {
+        // Update Active State
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        
+        fetch(`{% url 'dashboard_stats' %}?period=${period}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const fmt = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                document.getElementById('stat-deposit').innerText = fmt.format(data.total_deposit) + ' ₺';
+                document.getElementById('stat-withdraw').innerText = fmt.format(data.total_withdraw) + ' ₺';
+                document.getElementById('stat-commission').innerText = fmt.format(data.total_commission) + ' ₺';
+                document.getElementById('stat-net').innerText = fmt.format(data.net_balance) + ' ₺';
+            }
+        });
+    }
+
+    // Toggle Dealer Status Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toggle-dealer-status').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const userId = this.getAttribute('data-id');
+                const isChecked = this.checked;
+                const row = this.closest('tr');
+                // The status column is the 4th one (index 3)
+                // Let's find the badge within the row safely
+                const badge = row.querySelector('td:nth-child(4) .badge'); 
+
+                fetch('{% url "toggle-dealer-status" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: userId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update Badge UI
+                        if (data.new_status) {
+                            // Active
+                            badge.className = 'badge badge-soft-success';
+                            badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Aktif';
+                        } else {
+                            // Passive
+                            badge.className = 'badge badge-soft-danger';
+                            badge.innerHTML = '<i class="fas fa-ban me-1"></i>Pasif';
+                        }
+                    } else {
+                        alert('Hata: ' + (data.error || 'İşlem başarısız'));
+                        this.checked = !isChecked; // Revert switch
+                    }
+                })
+                .catch(err => {
+                    console.error('Network Error:', err);
+                    alert('Bir bağlantı hatası oluştu.');
+                    this.checked = !isChecked; // Revert switch
+                });
+            });
+        });
+    });
+</script>
 
 <style>
     /* Specific overrides for this dashboard */
@@ -182,5 +262,12 @@
     
     /* Ensure white text on gradients */
     .text-white-50 { color: rgba(255,255,255, 0.75) !important; }
+    
+    .btn-group .btn-white.active {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+        font-weight: bold;
+        color: var(--theme-primary);
+    }
 </style>
 {% endblock %}

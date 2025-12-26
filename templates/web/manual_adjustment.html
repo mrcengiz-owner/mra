@@ -1,62 +1,96 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h3 text-gray-800">{% trans "Manual Balance Adjustment" %}</h2>
-    </div>
-
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card card-custom shadow mb-4">
-                <div class="card-header py-3 bg-warning text-dark">
-                    <h6 class="m-0 font-weight-bold"><i class="fas fa-tools me-2"></i>{% trans "Adjustment Tool" %}</h6>
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-sliders-h me-2"></i>Manuel Bakiye Yönetimi
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {% trans "This action will create a MANUAL transaction record and immediately update the SubDealer's Net Balance." %}
+                <div class="card-body p-4 bg-light">
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-exclamation-triangle fs-2 me-3"></i>
+                        <div>
+                            <strong>Dikkat:</strong> Bu işlem kalıcı bir <u>FİNANSAL KAYIT</u> oluşturur ve bayinin bakiyesini anında günceller.
+                            <br>
+                            İşlemi yapan yönetici (Siz) sistem tarafından kaydedilecektir.
+                        </div>
                     </div>
 
-                    <form method="post">
+                    <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">{% trans "Select SubDealer" %}</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.dealer.label }}</label>
                             {{ form.dealer }}
+                            {% if form.dealer.errors %}
+                                <div class="text-danger small">{{ form.dealer.errors }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">{% trans "Action Type" %}</label>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">{{ form.transaction_type.label }}</label>
                                 {{ form.transaction_type }}
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">{% trans "Amount (TL)" %}</label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">{{ form.category.label }}</label>
+                                {{ form.category }}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.amount.label }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 fw-bold">₺</span>
                                 {{ form.amount }}
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">{% trans "Comm. Rate (%)" %}</label>
-                                {{ form.commission_rate }}
-                            </div>
+                             {% if form.amount.errors %}
+                                <div class="text-danger small">{{ form.amount.errors }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">{% trans "Reason / Description" %}</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.description.label }}</label>
                             {{ form.description }}
-                            <div class="form-text">{% trans "Required for Audit logs." %}</div>
+                             {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save me-2"></i> {% trans "Apply Adjustment" %}
+                        <div class="d-grid gap-2">
+                            <hr>
+                            <button type="submit" class="btn btn-primary btn-lg shadow-sm fw-bold">
+                                <i class="fas fa-check-circle me-2"></i>İşlemi Onayla ve Kaydet
                             </button>
+                            <a href="{% url 'admin-dashboard' %}" class="btn btn-light btn-lg text-muted mt-2">İptal</a>
                         </div>
+
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Optional: Select2 init if needed
+    // $(document).ready(function() {
+    //     $('.select2').select2();
+    // });
+</script>
 {% endblock %}

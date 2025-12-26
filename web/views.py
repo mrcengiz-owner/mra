@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.views.generic import FormView, ListView, View
 from django.contrib import messages
 from django.utils import timezone
-from .forms import SystemConfigForm, ManualAdjustmentForm
+from .forms import SystemConfigForm, ManualAdjustmentForm, WithdrawalApprovalForm
 from finance.utils import send_transaction_webhook
 from finance.models import SystemConfig
 from .filters import TransactionFilter
@@ -19,7 +19,6 @@ import json
 from accounts.utils import log_action
 import csv
 from django.http import HttpResponse, JsonResponse
-
 from accounts.models import SubDealerProfile, CustomUser, AuditLog
 from finance.models import Transaction, BankAccount
 
@@ -80,13 +79,16 @@ class SuperAdminDashboardView(UserPassesTestMixin, TemplateView):
         # D. Toplam Komisyon: (API İşlem Komisyonları + Manuel İşlem Komisyonları)
         total_commission = approved_txs.aggregate(s=Sum('commission_amount'))['s'] or Decimal('0.00')
             
-        # C. Net Kasa: (Toplam Yatırım Brüt - Toplam Çekim - Komisyon)
-        net_balance = total_in_gross - total_out - total_in_comm
+        # C. Net Kasa: Sum of active dealers' wallet balances
+        # This includes Manual Adjustments automatically since they affect the balance field.
+        total_dealer_balance = SubDealerProfile.objects.filter(user__is_active=True).aggregate(
+            total=Sum('current_net_balance')
+        )['total'] or Decimal('0.00')
         
         ctx['total_volume_in'] = total_in_gross
         ctx['total_volume_out'] = total_out
         ctx['total_commission'] = total_in_comm
-        ctx['net_balance'] = net_balance
+        ctx['net_balance'] = total_dealer_balance
         
         # Active Dealer Count
         ctx['active_dealer_count'] = SubDealerProfile.objects.filter(is_active_by_system=True).count()
@@ -132,6 +134,24 @@ class SubDealerDashboardView(UserPassesTestMixin, TemplateView):
         ctx['period_net'] = gross_deposit - total_withdraw - total_commission
 
         return ctx
+
+
+class BaseAdminReportView(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Base view for Admin Reports.
+    Allows access to Superusers, Staff, and users with ADMIN/SUPERADMIN roles.
+    """
+    def test_func(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return False
+            
+        # Check for multiple permission levels
+        return (
+            user.is_superuser or 
+            user.is_staff or 
+            getattr(user, 'role', '') in ['SUPERADMIN', 'ADMIN']
+        )
 
 class ReportsPageView(UserPassesTestMixin, FilterView):
     template_name = 'web/reports.html'
@@ -290,7 +310,42 @@ class TransactionActionView(UserPassesTestMixin, View):
             if tx.status != Transaction.Status.PENDING:
                 messages.error(request, 'İşlem zaten sonuçlanmış.')
                 return self._redirect_back(tx)
+
+            # WITHDRAWAL LOGIC: Handle Receipt & Bank
+            if tx.transaction_type == Transaction.TransactionType.WITHDRAW:
+                form = WithdrawalApprovalForm(request.POST, request.FILES, instance=tx)
+                if form.is_valid():
+                    tx = form.save(commit=False)
+                    tx.status = Transaction.Status.APPROVED
+                    tx.processed_at = timezone.now()
+                    tx.processed_by = request.user
+                    tx.save()
+                    
+                    send_transaction_webhook(tx)
+                    log_action(request, request.user, 'APPROVE_WITHDRAWAL', tx, details={
+                        'amount': float(tx.amount),
+                        'bank': str(tx.processed_by_bank)
+                    })
+                    messages.success(request, f'Çekim #{tx.id} onaylandı ve dekont kaydedildi.')
+                    return self._redirect_back(tx)
+                else:
+                     # Form Error Handling
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+                    return self._redirect_back(tx)
                 
+            # DEPOSIT LOGIC (Existing)
+            # 1. RECALCULATE COMMISSION (Always based on current DB amount)
+            # The amount should be updated via 'update_transaction_amount' view BEFORE approval if needed.
+            # We explicitly recalculate here to be safe and ensure dealer gets correct cut.
+            if tx.sub_dealer:
+                rate = tx.sub_dealer.commission_rate
+                # Calculate: Amount * (Rate / 100)
+                tx.commission_amount = tx.amount * (rate / Decimal('100.00'))
+            else:
+                tx.commission_amount = Decimal('0.00')
+
             tx.status = Transaction.Status.APPROVED
             tx.processed_at = timezone.now()
             tx.processed_by = request.user
@@ -317,7 +372,7 @@ class TransactionActionView(UserPassesTestMixin, View):
             })
             
             if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.META.get('HTTP_ACCEPT') == 'application/json':
-                return JsonResponse({'status': 'success', 'message': f'İşlem #{tx.id} reddedildi.'})
+                return JsonResponse({'status': 'success', 'message': f'İşlem #{tx.id} reddedildi.'}, encoder=DjangoJSONEncoder)
             
             messages.warning(request, f'İşlem #{tx.id} reddedildi.')
 
@@ -381,6 +436,8 @@ class WithdrawalsListView(UserPassesTestMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx['sub_dealers'] = SubDealerProfile.objects.select_related('user').all()
         ctx['statuses'] = Transaction.Status.choices
+        # Add active banks for the modal
+        ctx['admin_banks'] = BankAccount.objects.filter(is_active=True).select_related('sub_dealer')
         return ctx
 
 class ManualAdjustmentView(UserPassesTestMixin, FormView):
@@ -393,29 +450,38 @@ class ManualAdjustmentView(UserPassesTestMixin, FormView):
 
     def form_valid(self, form):
         dealer = form.cleaned_data['dealer']
-        amount = form.cleaned_data['amount']
         tx_type = form.cleaned_data['transaction_type']
+        category = form.cleaned_data['category']
+        amount = form.cleaned_data['amount']
         desc = form.cleaned_data['description']
-        comm_rate = form.cleaned_data.get('commission_rate', Decimal('0.00'))
         
-        commission_amount = amount * (comm_rate / Decimal('100.00'))
-        
-        txn = Transaction.objects.create(
+        # Create Transaction Record
+        tx = Transaction.objects.create(
             sub_dealer=dealer,
             transaction_type=tx_type,
+            category=category,
             status=Transaction.Status.APPROVED,
-            amount=amount, 
-            commission_amount=commission_amount,
-            external_user_id=f"ADMIN: {self.request.user.username}",
-            description=desc
+            amount=amount,
+            #  Manuel İşlemlerde, aksi belirtilmedikçe komisyon genellikle 0'dır, ancak mevcut formda değildir.
+            # Güvenlik açısından komisyonu açıkça 0 olarak belirledik.
+            commission_amount=Decimal('0.00'),
+            description=desc,
+            processed_by=self.request.user,
+            processed_at=timezone.now(),
+            external_user_id=f"ADMIN: {self.request.user.username}" # Traceability
         )
-        log_action(self.request, self.request.user, 'MANUAL_BALANCE_ADJUST', txn, details={
+        
+        # Update Balance
+        dealer.recalculate_balance()
+        
+        # Log Action
+        log_action(self.request, self.request.user, 'MANUAL_ADJUSTMENT', tx, details={
             'amount': float(amount),
             'type': tx_type,
-            'dealer': dealer.user.username
+            'category': category
         })
         
-        messages.success(self.request, f'Adjustment applied successfully. Commission: {commission_amount} TL')
+        messages.success(self.request, f'Manuel işlem başarıyla kaydedildi ve bakiye güncellendi. (ID: {tx.id})')
         return super().form_valid(form)
 
 class GlobalSettingsView(UserPassesTestMixin, FormView):
@@ -437,56 +503,103 @@ class GlobalSettingsView(UserPassesTestMixin, FormView):
         messages.success(self.request, 'System configuration updated.')
         return super().form_valid(form)
 
-class DealerReportView(UserPassesTestMixin, TemplateView):
+class AdminDealerAnalyticsView(BaseAdminReportView, TemplateView):
     template_name = 'web/reports_dealer.html'
 
-    def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+    # test_func inherited from BaseAdminReportView
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         
-        # Determine Date Range
-        from datetime import  timedelta
-        today = timezone.now().date()
-        start_date = today - timedelta(days=30) # Default last 30 days
+        # Determine Date Range from GET params or default
+        date_start = self.request.GET.get('date_start')
+        date_end = self.request.GET.get('date_end')
         
-        # Aggregation
+        from django.db.models import Sum, Count, Avg, F, Q, Case, When, FloatField, DurationField, ExpressionWrapper
+        from django.db.models.functions import Cast
+        
+        # Base Queryset for Aggregation
         dealers = SubDealerProfile.objects.all().select_related('user')
-        dealer_stats = []
         
-        for dealer in dealers:
-            # Filter transactions for this dealer
-            txs = Transaction.objects.filter(sub_dealer=dealer, status=Transaction.Status.APPROVED)
+        # We need to filter aggregation by date if provided
+        date_filter = Q()
+        if date_start:
+            date_filter &= Q(transactions__created_at__date__gte=date_start)
+        if date_end:
+            date_filter &= Q(transactions__created_at__date__lte=date_end)
             
-            deposit = txs.filter(transaction_type='DEPOSIT').aggregate(s=Sum('amount'))['s'] or Decimal('0.00')
-            withdraw = txs.filter(transaction_type='WITHDRAW').aggregate(s=Sum('amount'))['s'] or Decimal('0.00')
+        # Main Aggregation Query
+        dealer_stats = dealers.annotate(
+            total_tx_count=Count('transactions', filter=date_filter),
             
-            # Estimate Commission
-            commission = deposit * (dealer.commission_rate / Decimal('100.00'))
+            # Volume Metrics
+            deposit_vol=Sum('transactions__amount', 
+                filter=date_filter & Q(transactions__transaction_type='DEPOSIT') & Q(transactions__status='APPROVED'),
+                default=0
+            ),
+            withdraw_vol=Sum('transactions__amount', 
+                filter=date_filter & Q(transactions__transaction_type='WITHDRAW') & Q(transactions__status='APPROVED'),
+                default=0
+            ),
             
-            # Net Balance (Calculated)
-            net_balance = deposit - withdraw - commission
+            # Commission Metrics
+            total_commission=Sum('transactions__commission_amount', 
+                filter=date_filter & Q(transactions__status='APPROVED'),
+                default=0
+            ),
             
-            dealer_stats.append({
-                'username': dealer.user.username,
-                'rate': dealer.commission_rate,
-                'deposit': deposit,
-                'withdraw': withdraw,
-                'commission': commission,
-                'net_balance': net_balance,
-                'current_balance': dealer.current_net_balance, # Compare with stored
-                'is_active': dealer.is_active_by_system
+            # Operational Metrics
+            approved_count=Count('transactions', 
+                filter=date_filter & Q(transactions__status='APPROVED')
+            ),
+            
+            # Success Rate: Approved / Total (We handle division by zero in template or here)
+            # Duration: Update - Create (Only for Approved transactions properly processed)
+            avg_duration=Avg(
+                ExpressionWrapper(F('transactions__processed_at') - F('transactions__created_at'), output_field=DurationField()),
+                filter=date_filter & Q(transactions__status='APPROVED')
+            )
+        ).order_by('-deposit_vol')
+        
+        # Post-Processing
+        report_data = []
+        for d in dealer_stats:
+            success_rate = 0
+            if d.total_tx_count > 0:
+                success_rate = (d.approved_count / d.total_tx_count) * 100
+            
+            # Calculate Net Volume (In - Out)
+            net_vol = (d.deposit_vol or 0) - (d.withdraw_vol or 0)
+            
+            report_data.append({
+                'dealer': d,
+                'username': d.user.username,
+                'deposit_vol': d.deposit_vol or 0,
+                'withdraw_vol': d.withdraw_vol or 0,
+                'net_volume': net_vol,
+                'total_commission': d.total_commission or 0,
+                'success_rate': success_rate,
+                'avg_duration': d.avg_duration,
+                'tx_count': d.total_tx_count
             })
             
-        ctx['dealer_stats'] = dealer_stats
+        ctx['dealer_stats'] = report_data
+        
+        # Summary Cards (Top Performers)
+        if report_data:
+            # Sort for Top Volume
+            ctx['top_volume_dealer'] = max(report_data, key=lambda x: x['net_volume'])
+            # Sort for Fastest (exclude None duration)
+            valid_durations = [d for d in report_data if d['avg_duration']]
+            if valid_durations:
+                ctx['fastest_dealer'] = min(valid_durations, key=lambda x: x['avg_duration'])
+            
         return ctx
 
-class CommissionReportView(UserPassesTestMixin, TemplateView):
+class CommissionReportView(BaseAdminReportView, TemplateView):
     template_name = 'web/reports_commission.html'
 
-    def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.is_superadmin()
+    # test_func inherited from BaseAdminReportView
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -495,10 +608,11 @@ class CommissionReportView(UserPassesTestMixin, TemplateView):
         date_start = self.request.GET.get('date_start')
         date_end = self.request.GET.get('date_end')
         
-        qs = Transaction.objects.filter(
-            status=Transaction.Status.APPROVED, 
-            transaction_type='DEPOSIT'
-        ).select_related('sub_dealer')
+        from django.db.models.functions import TruncDate
+        from django.db.models import Sum, Count, Case, When, F, DecimalField
+        
+        # Base Query: All Approved Transactions
+        qs = Transaction.objects.filter(status=Transaction.Status.APPROVED).select_related('sub_dealer')
         
         if dealer_id:
             qs = qs.filter(sub_dealer_id=dealer_id)
@@ -506,29 +620,60 @@ class CommissionReportView(UserPassesTestMixin, TemplateView):
             qs = qs.filter(created_at__date__gte=date_start)
         if date_end:
             qs = qs.filter(created_at__date__lte=date_end)
+            
+        # Group by Date
+        daily_stats = qs.annotate(date=TruncDate('created_at')).values('date').annotate(
+            # Volume: Deposits + Manual Credits
+            volume=Sum(
+                Case(
+                    When(transaction_type__in=['DEPOSIT', 'MANUAL_CREDIT'], then=F('amount')),
+                    default=0,
+                    output_field=DecimalField()
+                )
+            ),
+            # Commission: From DB field (since it is calculated on approval)
+            # Differentiating sources if needed, but 'commission_amount' holds the cut.
+            commission_total=Sum('commission_amount'),
+            
+            # Count
+            count=Count('id')
+        ).order_by('-date')
         
-        daily_stats = {} 
+        # Prepare for Template
+        report_data = []
+        chart_labels = []
+        chart_data = []
         
-        for tx in qs:
-            # We must use local time for the date string to match user perspective
-            local_date = timezone.localtime(tx.created_at).date()
-            date_str = local_date.strftime('%Y-%m-%d')
-            
-            if date_str not in daily_stats:
-                daily_stats[date_str] = {'date': date_str, 'volume': Decimal('0.00'), 'commission': Decimal('0.00'), 'count': 0}
-            
-            comm = tx.amount * (tx.sub_dealer.commission_rate / Decimal('100.00'))
-            
-            daily_stats[date_str]['volume'] += tx.amount
-            daily_stats[date_str]['commission'] += comm
-            daily_stats[date_str]['count'] += 1
-            
-        # Convert to list and sort
-        report_data = sorted(daily_stats.values(), key=lambda x: x['date'], reverse=True)
+        total_earnings = Decimal('0.00')
+        total_volume = Decimal('0.00')
         
+        for d in daily_stats:
+            vol = d['volume'] or Decimal('0.00')
+            comm = d['commission_total'] or Decimal('0.00')
+            
+            report_data.append({
+                'date': d['date'],
+                'volume': vol,
+                'commission': comm,
+                'count': d['count']
+            })
+            
+            total_earnings += comm
+            total_volume += vol
+            
+            # For Chart (Reverse order usually better but let's strictly follow list or reverse in JS)
+            chart_labels.append(d['date'].strftime('%Y-%m-%d'))
+            chart_data.append(float(comm))
+            
         ctx['report_data'] = report_data
-        ctx['total_earnings'] = sum(d['commission'] for d in report_data)
-        ctx['total_volume'] = sum(d['volume'] for d in report_data)
+        ctx['total_earnings'] = total_earnings
+        ctx['total_volume'] = total_volume
+        
+        # Chart JSON
+        import json
+        ctx['chart_labels'] = json.dumps(list(reversed(chart_labels)))
+        ctx['chart_data'] = json.dumps(list(reversed(chart_data)))
+        
         ctx['sub_dealers'] = SubDealerProfile.objects.select_related('user').all()
         
         return ctx
@@ -608,3 +753,97 @@ class AuditLogListView(UserPassesTestMixin, ListView):
     def get_queryset(self):
         return AuditLog.objects.select_related('user').all().order_by('-created_at')
 
+
+
+class ToggleUserStatusView(UserPassesTestMixin, View):
+    """
+    AJAX view to toggle user active status.
+    Accessible by Staff users (Operational Admins) and Superadmins.
+    """
+    def test_func(self):
+        return self.request.user.is_authenticated and self.request.user.is_staff
+
+    def post(self, request):
+        user_id = request.POST.get('user_id')
+        if not user_id:
+            return JsonResponse({'status': 'error', 'message': 'User ID required'}, status=400)
+            
+        target_user = get_object_or_404(CustomUser, pk=user_id)
+        
+        # Prevent disabling superusers or oneself
+        if target_user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Cannot modify Superuser'}, status=403)
+        if target_user == request.user:
+            return JsonResponse({'status': 'error', 'message': 'Cannot modify yourself'}, status=403)
+            
+        # Toggle
+        target_user.is_active = not target_user.is_active
+        target_user.save()
+        
+        # Log action
+        log_action(request, request.user, 'TOGGLE_USER_STATUS', target_user, details={'new_status': target_user.is_active})
+        
+        return JsonResponse({
+            'status': 'success', 
+            'new_state': target_user.is_active,
+            'message': f'User {target_user.username} is now ' + ('Active' if target_user.is_active else 'Inactive')
+        })
+
+
+class AdminBankListView(UserPassesTestMixin, ListView):
+    model = BankAccount
+    template_name = 'web/admin_all_banks.html'
+    context_object_name = 'banks'
+
+    def test_func(self):
+        return self.request.user.is_authenticated and (self.request.user.is_staff or self.request.user.is_superuser)
+
+    def get_queryset(self):
+        # Show all banks, ordered by bank name
+        return BankAccount.objects.select_related('sub_dealer__user').all().order_by('bank_name')
+
+
+class UpdateTransactionAmountView(UserPassesTestMixin, View):
+    """
+    AJAX view to update transaction amount before approval.
+    """
+    def test_func(self):
+        u = self.request.user
+        return u.is_authenticated and (u.is_superuser or u.is_staff or u.is_subdealer())
+
+    def post(self, request):
+        # 1. Permission Check: Can this user edit amounts?
+        if request.user.is_subdealer() and not (request.user.is_superuser or request.user.is_staff):
+             if hasattr(request.user, 'profile') and not request.user.profile.can_edit_amounts:
+                  return JsonResponse({'status': 'error', 'message': 'Miktar düzenleme yetkiniz yok!'}, status=403)
+
+        tx_id = request.POST.get('id')
+        amount_str = request.POST.get('amount')
+        
+        if not tx_id or not amount_str:
+            return JsonResponse({'status': 'error', 'message': 'Eksik Parametreler.'}, status=400)
+            
+        tx = get_object_or_404(Transaction, pk=tx_id)
+        
+        # Security: If SubDealer, ensure it's their transaction
+        if request.user.is_subdealer() and not (request.user.is_superuser or request.user.is_staff):
+             if tx.sub_dealer.user != request.user:
+                 return JsonResponse({'status': 'error', 'message': 'Yetkilendirildi'}, status=403)
+        
+        if tx.status != Transaction.Status.PENDING:
+             return JsonResponse({'status': 'error', 'message': 'Only PENDING transactions can be edited.'}, status=400)
+
+        try:
+            # Clean and parse amount
+            clean_amount = amount_str.replace(',', '.')
+            new_amount = Decimal(clean_amount)
+            
+            if new_amount <= 0:
+                 return JsonResponse({'status': 'error', 'message': 'Amount must be positive.'}, status=400)
+
+            tx.amount = new_amount
+            tx.save(update_fields=['amount'])
+            
+            return JsonResponse({'status': 'success', 'new_amount': str(new_amount)})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

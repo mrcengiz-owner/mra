@@ -5,7 +5,7 @@
 <div class="container-fluid mt-4">
     <div class="row mb-4">
         <div class="col-12">
-            <h2 class="h3 text-theme-primary">Çekimlerim</h2>
+            <h2 class="h3 text-theme-primary">Çekim Yönetimi</h2>
         </div>
     </div>
 
@@ -109,28 +109,27 @@
                             <td>
                                 {% if tx.status == 'APPROVED' %}
                                 <span class="badge badge-soft-success"><i class="fas fa-check-circle me-1"></i>Ödendi</span>
+                                {% if tx.receipt_file %}
+                                    <a href="{{ tx.receipt_file.url }}" target="_blank" class="ms-1 text-success"><i class="fas fa-file-invoice"></i></a>
+                                {% endif %}
                                 {% elif tx.status == 'PENDING' %}
                                 <span class="badge badge-soft-warning"><i class="fas fa-clock me-1"></i>Bekliyor</span>
                                 {% else %}
-                                <span class="badge badge-soft-danger d-inline-flex align-items-center">
+                                <span class="badge badge-soft-danger d-inline-flex align-items-center" data-bs-toggle="tooltip" title="{{ tx.rejection_reason|default:'Sebep belirtilmemiş' }}">
                                     <i class="fas fa-times-circle me-1"></i>Reddedildi
-                                    {% if tx.rejection_reason %}
-                                        <i class="fas fa-info-circle ms-1 cursor-pointer" data-bs-toggle="tooltip" title="Sebep: {{ tx.rejection_reason }}"></i>
-                                    {% endif %}
+                                    <i class="fas fa-info-circle ms-1 cursor-pointer"></i>
                                 </span>
                                 {% endif %}
                             </td>
                             <td class="text-end pe-4">
                                 {% if tx.status == 'PENDING' %}
                                 <div class="d-flex justify-content-end gap-2">
-                                    <form action="{% url 'dealer-transaction-action' tx.id 'paid' %}" method="POST" class="d-inline" onsubmit="return confirm('Ödeme yapıldı olarak işaretlensin mi?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-soft-success fw-bold px-3 py-2">
-                                            <i class="fas fa-check-double me-1"></i> Ödendi
-                                        </button>
-                                    </form>
+                                    <!-- Modal Trigger Button -->
+                                    <button type="button" class="btn btn-sm btn-soft-success fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#approveModal" data-id="{{ tx.id }}" data-amount="{{ tx.amount|floatformat:2 }}">
+                                        <i class="fas fa-check-double me-1"></i> Ödendi
+                                    </button>
 
-                                    <button type="button" class="btn btn-sm btn-soft-danger fw-bold px-3 py-2" onclick="rejectTransaction('{{ tx.id }}', '{% url 'dealer-transaction-action' tx.id 'reject' %}')">
+                                    <button type="button" class="btn btn-sm btn-soft-danger fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#rejectModal" data-id="{{ tx.id }}">
                                         <i class="fas fa-times me-1"></i> Reddet
                                     </button>
                                 </div>
@@ -154,6 +153,204 @@
     </div>
 </div>
 
+
+
+
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-dark shadow-lg border-danger">
+            <div class="modal-header modal-header-dark border-danger">
+                <h5 class="modal-title fs-5 fw-bold font-monospace text-danger">
+                    <i class="fas fa-times-circle me-2"></i>REDDETME ONAYI
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="rejectForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-danger mb-4 p-3 rounded-3 d-flex align-items-center bg-danger-soft text-danger border border-danger border-opacity-25">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <strong>Dikkat!</strong> Bu işlemi reddetmek üzeresiniz. Bu işlem <b>geri alınamaz</b>.
+                        </div>
+                    </div>
+                
+                    <div class="mb-3">
+                        <label class="form-label form-label-dark">RET SEBEBİ</label>
+                        <textarea name="reason" class="form-control form-control-dark" rows="4" placeholder="Lütfen müşteriye iletilecek reddetme sebebini yazınız..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-dark border-top-0 pt-0">
+                    <button type="button" class="btn btn-ghost-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 py-2 w-100 flex-fill">
+                        <i class="fas fa-times me-2"></i> Reddet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Dark Theme */
+.modal-content-dark {
+    background-color: #1e1e2d;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header-dark, .modal-footer-dark {
+    background-color: #151521;
+    border-color: #323248;
+}
+
+.modal-header-dark .modal-title {
+    color: #ffffff;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.form-label-dark {
+    color: #a1a5b7;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.form-control-dark, .form-select-dark {
+    background-color: #1b1b29;
+    border: 1px solid #323248;
+    color: #ffffff;
+}
+
+.form-control-dark:focus, .form-select-dark:focus {
+    background-color: #1b1b29;
+    border-color: #50cd89;
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.alert-success-dashed {
+    background-color: rgba(80, 205, 137, 0.1);
+    border: 1px dashed #50cd89;
+    color: #50cd89;
+    text-align: center;
+}
+
+/* File Upload Area */
+.file-upload-wrapper {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    border: 2px dashed #323248;
+    border-radius: 0.475rem;
+    background-color: #1b1b29;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-upload-wrapper:hover {
+    border-color: #50cd89;
+    background-color: rgba(80, 205, 137, 0.05);
+}
+
+.file-upload-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-upload-icon {
+    font-size: 2rem;
+    color: #50cd89;
+    margin-bottom: 0.5rem;
+}
+
+.file-upload-text {
+    color: #a1a5b7;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.btn-ghost-light {
+    color: #7e8299;
+    background: transparent;
+    border: 1px solid transparent;
+}
+.btn-ghost-light:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+</style>
+
+<!-- APPROVAL MODAL -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-dark shadow-lg">
+            <div class="modal-header modal-header-dark">
+                <h5 class="modal-title fs-5 fw-bold font-monospace">
+                    <i class="fas fa-check-circle text-success me-2"></i>ÖDEME ONAYI
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="approveForm" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <!-- Info Alert -->
+                    <div class="alert alert-success-dashed mb-4 p-3 rounded-3 d-flex flex-column align-items-center justify-content-center">
+                        <span class="text-uppercase small fw-bold tracking-wide opacity-75">Ödenecek Tutar</span>
+                        <span id="modalAmountBadge" class="display-6 fw-bolder mt-1">0.00 ₺</span>
+                    </div>
+                
+                    <!-- Bank Selection -->
+                    <div class="mb-4">
+                        <label class="form-label form-label-dark">PARANIN ÇIKTIĞI BANKA</label>
+                        <select name="processed_by_bank" class="form-select form-select-dark" required>
+                             <option value="" selected disabled>Banka Seçiniz...</option>
+                             {% for bank in my_banks %}
+                                 <option value="{{ bank.id }}">{{ bank.bank_name }} - {{ bank.iban|truncatechars:10 }}</option>
+                             {% empty %}
+                                 <option value="" disabled>Aktif banka hesabınız bulunmamaktadır.</option>
+                             {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="mb-3">
+                        <label class="form-label form-label-dark">DEKONT YÜKLEME</label>
+                        <div class="file-upload-wrapper" id="dropZone">
+                            <input type="file" name="receipt_file" class="file-upload-input" accept=".pdf,.jpg,.jpeg,.png" required onchange="updateFileName(this)">
+                            <div class="text-center pointer-events-none">
+                                <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                                <div class="file-upload-text" id="fileLabel">
+                                    Dekontu sürükleyin veya <span class="text-success text-decoration-underline">tıklayın</span>
+                                </div>
+                                <div class="x-small text-muted mt-1 opacity-50">PDF, JPG veya PNG (Max 5MB)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-dark border-top-0 pt-0">
+                    <button type="button" class="btn btn-ghost-light" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 w-100 flex-fill">
+                        <i class="fas fa-check me-2"></i> Onayla ve Bitir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     function copyToClipboard(text, btn) {
         navigator.clipboard.writeText(text).then(function() {
@@ -164,5 +361,53 @@
             console.error('Copy failed', err);
         });
     }
+    
+    function updateFileName(input) {
+        var label = document.getElementById('fileLabel');
+        if (input.files && input.files.length > 0) {
+            label.innerHTML = '<span class="text-success fw-bold">' + input.files[0].name + '</span>';
+        } else {
+            label.innerHTML = 'Dekontu sürükleyin veya <span class="text-success text-decoration-underline">tıklayın</span>';
+        }
+    }
+
+    // Modal Logic
+    document.addEventListener('DOMContentLoaded', function () {
+         // Enable Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // APPROVE MODAL
+        var approveModal = document.getElementById('approveModal');
+        approveModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var txId = button.getAttribute('data-id');
+            var amount = button.getAttribute('data-amount');
+            
+            // Generate Dynamic URL
+            // Pattern: /web/dealer/transaction/action/ID/paid/
+            var actionUrl = "{% url 'dealer-transaction-action' 0 'paid' %}".replace('0', txId);
+            
+            var modalForm = approveModal.querySelector('#approveForm');
+            modalForm.action = actionUrl;
+            
+            var amountBadge = approveModal.querySelector('#modalAmountBadge');
+            amountBadge.textContent = amount + " ₺";
+        });
+
+        // REJECT MODAL Logic
+        var rejectModal = document.getElementById('rejectModal');
+        rejectModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var txId = button.getAttribute('data-id');
+            // Pattern: /web/dealer/transaction/action/ID/reject/
+            var actionUrl = "{% url 'dealer-transaction-action' 0 'reject' %}".replace('0', txId);
+            
+            var modalForm = rejectModal.querySelector('#rejectForm');
+            modalForm.action = actionUrl;
+        });
+    });
 </script>
 {% endblock %}

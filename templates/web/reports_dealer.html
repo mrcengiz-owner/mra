@@ -4,65 +4,155 @@
 {% block page_title %}Bayi Bazlı Rapor{% endblock %}
 
 {% block content %}
-<div class="row g-4 mb-4">
-    <!-- Summary Card -->
-    <div class="col-md-12">
-        <div class="card card-stat bg-gradient-primary h-100 text-white">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center">
-                <div>
-                     <h6 class="text-uppercase ls-1 opacity-75 mb-2">Toplam Bayi Sayısı</h6>
-                     <h2 class="mb-0 fw-bold display-6">{{ dealer_stats|length }}</h2>
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-3 mb-md-0 text-gray-800"><i class="fas fa-users-cog me-2 text-primary"></i>Bayi Performans Analizi</h5>
+        
+        <form method="get" class="d-flex gap-2 align-items-center">
+            <input type="date" name="date_start" class="form-control form-control-sm" value="{{ request.GET.date_start }}">
+            <input type="date" name="date_end" class="form-control form-control-sm" value="{{ request.GET.date_end }}">
+            <button type="submit" class="btn btn-primary btn-sm rounded px-3">
+                <i class="fas fa-filter"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- Winner Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Top Volume Dealer -->
+        <div class="col-md-4">
+            <div class="card card-stat bg-gradient-success text-white h-100 position-relative overflow-hidden border-0">
+                <div class="card-body p-4 position-relative z-1">
+                     <div class="d-flex justify-content-between align-items-start">
+                         <div>
+                             <h6 class="text-uppercase ls-1 opacity-75 mb-2" style="font-size:0.75rem;">En Yüksek Hacim</h6>
+                             {% if top_volume_dealer %}
+                                <h3 class="mb-1 fw-bold">{{ top_volume_dealer.username }}</h3>
+                                <p class="mb-0 opacity-75 fw-medium">{{ top_volume_dealer.net_volume|floatformat:0|intcomma }} ₺ Net Hacim</p>
+                             {% else %}
+                                <h3 class="mb-0">-</h3>
+                             {% endif %}
+                         </div>
+                         <div class="rounded-circle bg-white bg-opacity-25 p-3">
+                             <i class="fas fa-trophy fa-2x"></i>
+                         </div>
+                     </div>
                 </div>
-                <div class="icon-box text-white opacity-25">
-                    <i class="fas fa-users fa-4x"></i>
+                <!-- Decorative Circle -->
+                <div class="position-absolute top-0 end-0 bg-white opacity-10 rounded-circle" style="width: 150px; height: 150px; margin-right: -50px; margin-top: -50px;"></div>
+            </div>
+        </div>
+
+        <!-- Fastest Dealer -->
+        <div class="col-md-4">
+            <div class="card card-stat bg-gradient-info text-white h-100 position-relative overflow-hidden border-0">
+                <div class="card-body p-4 position-relative z-1">
+                     <div class="d-flex justify-content-between align-items-start">
+                         <div>
+                             <h6 class="text-uppercase ls-1 opacity-75 mb-2" style="font-size:0.75rem;">En Hızlı Operasyon</h6>
+                             {% if fastest_dealer %}
+                                <h3 class="mb-1 fw-bold">{{ fastest_dealer.username }}</h3>
+                                <p class="mb-0 opacity-75 fw-medium">Ort. {{ fastest_dealer.avg_duration|default:"-" }}</p>
+                             {% else %}
+                                <h3 class="mb-0">-</h3>
+                             {% endif %}
+                         </div>
+                         <div class="rounded-circle bg-white bg-opacity-25 p-3">
+                             <i class="fas fa-tachometer-alt fa-2x"></i>
+                         </div>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Stats -->
+        <div class="col-md-4">
+            <div class="card card-stat bg-dark text-white h-100 position-relative overflow-hidden border-0 bg-gradient-primary">
+                <div class="card-body p-4 position-relative z-1">
+                     <div class="d-flex justify-content-between align-items-start">
+                         <div>
+                             <h6 class="text-uppercase ls-1 opacity-75 mb-2" style="font-size:0.75rem;">Aktif Operatör</h6>
+                             <h3 class="mb-1 fw-bold">{{ dealer_stats|length }}</h3>
+                             <p class="mb-0 opacity-75 fw-medium">Toplam Bayi</p>
+                         </div>
+                         <div class="rounded-circle bg-white bg-opacity-25 p-3">
+                             <i class="fas fa-users fa-2x"></i>
+                         </div>
+                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Detailed Table -->
+    <div class="card card-custom border-0 shadow-sm">
+        <div class="card-header-custom border-bottom pb-3 mb-3 d-flex justify-content-between">
+            <h6 class="fw-bold m-0 text-primary">Performans Detayları</h6>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table-modern w-100 align-middle">
+                <thead>
+                    <tr>
+                        <th>BAYİ</th>
+                        <th class="text-center">İŞLEM ADEDİ</th>
+                        <th class="text-end">YATIRIM HACMİ</th>
+                        <th class="text-end">ÇEKİM HACMİ</th>
+                        <th class="text-end">NET KATKI</th>
+                        <th class="text-center">BAŞARI ORANI</th>
+                        <th class="text-center">ORT. SÜRE</th>
+                        <th class="text-end">KAZANILAN KOMİSYON</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in dealer_stats %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm bg-light text-primary me-2 rounded-circle fw-bold d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                                    {{ stat.username|make_list|first|upper }}
+                                </div>
+                                <span class="fw-bold text-dark">{{ stat.username }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center fw-medium">{{ stat.tx_count }}</td>
+                        <td class="text-end text-success fw-medium">+{{ stat.deposit_vol|intcomma }} ₺</td>
+                        <td class="text-end text-danger fw-medium">-{{ stat.withdraw_vol|intcomma }} ₺</td>
+                        <td class="text-end fw-bold">{{ stat.net_volume|intcomma }} ₺</td>
+                        <td class="text-center">
+                            <div class="d-flex align-items-center justify-content-center">
+                                <div class="progress w-100 me-2" style="height: 6px; max-width: 60px;">
+                                    <div class="progress-bar {% if stat.success_rate > 80 %}bg-success{% elif stat.success_rate > 50 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ stat.success_rate|floatformat:0 }}%"></div>
+                                </div>
+                                <span class="small fw-bold min-w-30px">%{{ stat.success_rate|floatformat:0 }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center text-muted small">
+                            {% if stat.avg_duration %}
+                                <i class="fas fa-stopwatch me-1"></i> {{ stat.avg_duration }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-primary fw-bold">{{ stat.total_commission|intcomma }} ₺</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">Veri bulunamadı.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<div class="card card-custom border-0 shadow-sm">
-    <div class="card-header-custom border-bottom pb-3 mb-3">
-        <h6 class="fw-bold m-0 text-primary">Bayi Performans Detayı</h6>
-    </div>
-    
-    <div class="table-responsive">
-        <table class="table-modern w-100 align-middle">
-            <thead>
-                <tr>
-                    <th>Bayi</th>
-                    <th>Komisyon Oranı</th>
-                    <th class="text-end">Top. Yatırım</th>
-                    <th class="text-end">Top. Çekim</th>
-                    <th class="text-end">Net Kasa (Bakiye)</th>
-                    <th class="text-end">Hesaplanan Komisyon</th>
-                    <th class="text-center">Durum</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stat in dealer_stats %}
-                <tr>
-                    <td class="fw-bold text-primary">{{ stat.username }}</td>
-                    <td><span class="badge bg-light text-dark border">%{{ stat.rate }}</span></td>
-                    <td class="text-end fw-medium text-success">+{{ stat.deposit|intcomma }} ₺</td>
-                    <td class="text-end fw-medium text-danger">-{{ stat.withdraw|intcomma }} ₺</td>
-                    <td class="text-end fw-bold">{{ stat.net_balance|intcomma }} ₺</td>
-                    <td class="text-end text-warning fw-bold">{{ stat.commission|intcomma }} ₺</td>
-                    <td class="text-center">
-                        {% if stat.is_active %}
-                            <i class="fas fa-check-circle text-success" title="Aktif"></i>
-                        {% else %}
-                            <i class="fas fa-ban text-danger" title="Pasif"></i>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center py-5 text-muted">Veri bulunamadı.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+<style>
+/* Gradient Overrides for specific cards if not in base */
+.bg-gradient-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+.bg-gradient-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.bg-gradient-info { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.min-w-30px { min-width: 30px; }
+</style>
 {% endblock %}

@@ -8,6 +8,7 @@ from django.utils import timezone
 from finance.models import Transaction, BankAccount
 from accounts.models import SubDealerProfile
 from accounts.utils import log_action
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ class DealerMixin(LoginRequiredMixin, UserPassesTestMixin):
 class FilteredTransactionListView(DealerMixin, ListView):
     def get_queryset_base(self, tx_type):
         profile = self.get_profile()
-        qs = Transaction.objects.filter(sub_dealer=profile, transaction_type=tx_type)
+        qs = Transaction.objects.filter(sub_dealer=profile, transaction_type=tx_type).select_related('bank_account')
         
         # Filter Parameters
         status_filter = self.request.GET.get('status')
@@ -75,6 +76,11 @@ class DealerWithdrawalListView(FilteredTransactionListView):
 
     def get_queryset(self):
         return self.get_queryset_base(Transaction.TransactionType.WITHDRAW)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['my_banks'] = BankAccount.objects.filter(sub_dealer=self.get_profile(), is_active=True)
+        return ctx
 
 class DealerTransactionUpdateView(DealerMixin, UpdateView):
     model = Transaction
@@ -213,6 +219,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 
+from .forms import WithdrawalApprovalForm
+
 class DealerTransactionActionView(DealerMixin, View):
     def post(self, request, pk, action):
         tx = get_object_or_404(Transaction, pk=pk, sub_dealer=self.get_profile())
@@ -221,6 +229,11 @@ class DealerTransactionActionView(DealerMixin, View):
         if action == 'approve':
             # Deposits: Dealer explicitly approves receiving money
             if tx.transaction_type == Transaction.TransactionType.DEPOSIT and tx.status == Transaction.Status.PENDING:
+                # 1. RECALCULATE COMMISSION (Always based on current DB amount)
+                # The amount should have been updated via 'update_transaction_amount' if needed via AJAX popup.
+                rate = self.get_profile().commission_rate
+                tx.commission_amount = tx.amount * (rate / Decimal('100.00'))
+
                 tx.status = Transaction.Status.APPROVED
                 tx.processed_at = timezone.now()
                 tx.processed_by = request.user
@@ -255,12 +268,28 @@ class DealerTransactionActionView(DealerMixin, View):
         elif action == 'paid':
             # Withdrawals: Dealer confirms they paid the user
             if tx.transaction_type == Transaction.TransactionType.WITHDRAW and tx.status == Transaction.Status.PENDING:
-                tx.status = Transaction.Status.APPROVED # Using APPROVED as 'Completed/Paid'
-                tx.processed_at = timezone.now()
-                tx.processed_by = request.user
-                tx.save()
-                log_action(request, request.user, 'DEALER_MARK_PAID_WITHDRAW', tx, details={'amount': float(tx.amount)})
-                messages.success(request, f'Çekim #{tx.id} ödendi olarak işaretlendi.')
+                form = WithdrawalApprovalForm(request.POST, request.FILES, instance=tx)
+                if form.is_valid():
+                    # Security check: Ensure selected bank belongs to dealer
+                    chosen_bank = form.cleaned_data.get('processed_by_bank')
+                    if chosen_bank and chosen_bank.sub_dealer != self.get_profile():
+                         messages.error(request, 'Hata: Seçilen banka size ait değil.')
+                         return redirect('dealer-withdrawals')
+
+                    tx = form.save(commit=False)
+                    tx.status = Transaction.Status.APPROVED # Using APPROVED as 'Completed/Paid'
+                    tx.processed_at = timezone.now()
+                    tx.processed_by = request.user
+                    tx.save()
+                    log_action(request, request.user, 'DEALER_MARK_PAID_WITHDRAW', tx, details={
+                        'amount': float(tx.amount),
+                        'bank': str(chosen_bank)
+                    })
+                    messages.success(request, f'Çekim #{tx.id} ödendi ve dekont kaydedildi.')
+                else:
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
             else:
                 messages.error(request, 'Bu işlem tamamlanamaz.')
         

@@ -43,6 +43,18 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('Role Info', {'fields': ('role',)}),
     )
+    actions = ['reset_2fa_device']
+
+    @admin.action(description="2FA Cihazını Sıfırla (Reset 2FA)")
+    def reset_2fa_device(self, request, queryset):
+        count = 0
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        for user in queryset:
+            devices = TOTPDevice.objects.filter(user=user)
+            if devices.exists():
+                devices.delete()
+                count += 1
+        self.message_user(request, f"{count} kullanıcının 2FA cihazı sıfırlandı.")
 
 @admin.register(SubDealerProfile)
 class SubDealerProfileAdmin(admin.ModelAdmin):

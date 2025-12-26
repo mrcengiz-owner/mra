@@ -1,0 +1,169 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2FA Kurulumu - NexKasa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+        }
+        .setup-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 450px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        .icon-circle {
+            width: 80px; height: 80px; 
+            background: rgba(59, 130, 246, 0.1); 
+            border-radius: 50%; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .step-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .step-desc { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; }
+        
+        /* QR Kod Kutusu */
+        .qr-wrapper {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+        .qr-wrapper img {
+            display: block;
+            width: 200px;
+            height: 200px;
+        }
+        
+        /* Form elemanlarını özelleştirme */
+        input, select {
+            background-color: #0f172a !important;
+            border: 1px solid #334155 !important;
+            color: #fff !important;
+            padding: 0.8rem;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 1rem;
+            text-align: center; /* Kodu ortala */
+            letter-spacing: 2px;
+        }
+        input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        label { display: none; } 
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            padding: 0.9rem;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .btn-link { color: #64748b; text-decoration: none; margin-top: 1rem; display: inline-block; }
+        .btn-link:hover { color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div class="setup-card">
+        
+        <div class="icon-circle">
+            {% if wizard.steps.current == 'welcome' %}
+                <i class="fas fa-shield-halved fa-3x text-primary"></i>
+            {% elif wizard.steps.current == 'generator' %}
+                <i class="fas fa-qrcode fa-3x text-primary"></i>
+            {% elif wizard.steps.current == 'validation' %}
+                <i class="fas fa-check-double fa-3x text-primary"></i>
+            {% else %}
+                <i class="fas fa-cogs fa-3x text-primary"></i>
+            {% endif %}
+        </div>
+
+        <form action="" method="post">{% csrf_token %}
+            {{ wizard.management_form }}
+
+            {% if wizard.steps.current == 'welcome' %}
+                <h2 class="step-title">Hesap Güvenliği</h2>
+                <p class="step-desc">Hesabınızı korumak için Google Authenticator kurulumu yapmanız gerekmektedir.</p>
+            
+            {% elif wizard.steps.current == 'method' %}
+                <h2 class="step-title">Yöntem Seçin</h2>
+                <p class="step-desc">Lütfen doğrulama uygulaması seçeneğini işaretleyin.</p>
+                {{ wizard.form }}
+
+            {% elif wizard.steps.current == 'generator' %}
+                <h2 class="step-title">QR Kodu Tarayın</h2>
+                <p class="step-desc">Google Authenticator uygulamasını açın ve kodu okutun.</p>
+                
+                <div class="qr-wrapper">
+                    <img src="{{ QR_URL }}" alt="QR Code">
+                </div>
+                
+                {% if secret_key %}
+                <div class="alert alert-warning mt-3 mb-3 p-3 text-center" role="alert" style="border-radius: 12px; border: 2px dashed #f59e0b; background-color: rgba(245, 158, 11, 0.1);">
+                    <p class="small text-muted mb-2"><i class="fas fa-exclamation-triangle me-1"></i> QR kodu okutamazsanız, aşağıdaki kodu manuel giriniz:</p>
+                    <h2 class="mb-0" style="font-family: monospace; font-weight: bold; color: #fbbf24; letter-spacing: 4px; word-break: break-all; font-size: 1.8rem;">
+                        {{ secret_key }}
+                    </h2>
+                </div>
+                {% endif %}
+
+                <p class="small text-muted mb-2">Kurulumu tamamlamak için altı haneli kodu aşağıya girin:</p>
+                {{ wizard.form }}
+
+            {% elif wizard.steps.current == 'validation' %}
+                <h2 class="step-title">Doğrulama</h2>
+                <p class="step-desc">Lütfen uygulamanızda görünen güncel 6 haneli kodu girin.</p>
+                {{ wizard.form }}
+            {% else %}
+                {{ wizard.form }}
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary">
+                {% if wizard.steps.current == 'welcome' %}Kuruluma Başla{% else %}Devam Et{% endif %}
+            </button>
+
+            {% if wizard.steps.prev %}
+                <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-link">
+                    Geri Dön
+                </button>
+            {% endif %}
+        </form>
+    </div>
+    
+    <script>
+        // Inputlara otomatik focus ve placeholder ekleme
+        document.addEventListener("DOMContentLoaded", function() {
+            const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+            inputs.forEach(input => {
+                input.placeholder = "Kodunuzu girin";
+                input.setAttribute("autocomplete", "off");
+            });
+        });
+    </script>
+</body>
+</html>

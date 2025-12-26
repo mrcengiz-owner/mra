@@ -21,21 +21,57 @@ class WithdrawRequestAPIView(APIView):
     """
     authentication_classes = []
     permission_classes = []
+    throttle_scope = 'withdraw'
 
     def post(self, request, format=None):
-        from finance.models import Transaction
+        from finance.models import Transaction, Blacklist
+        from .utils import is_blacklisted, get_client_ip
+        # from .models import Blacklist # DEPRECATED
+
+        # Blacklist Checks
+        client_ip = get_client_ip(request)
+        if is_blacklisted(client_ip, Blacklist.BlacklistType.IP):
+             return Response({"error": "Erişim engellendi (IP)."}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Note: We can check External User ID only after validating data or peeking data
+        external_id = request.data.get('external_id')
+        if external_id and is_blacklisted(external_id, Blacklist.BlacklistType.USER_ID):
+             return Response({"error": "Hesabınız kısıtlanmıştır."}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_iban = request.data.get('customer_iban')
+        if target_iban and is_blacklisted(target_iban, Blacklist.BlacklistType.IBAN):
+             return Response({"error": "Bu IBAN engellenmiştir."}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = WithdrawalRequestSerializer(data=request.data)
         if serializer.is_valid():
+            external_id_val = serializer.validated_data['external_id']
             try:
-                txn = Transaction.objects.create(
-                    sub_dealer=None,
-                    transaction_type=Transaction.TransactionType.WITHDRAW,
-                    status=Transaction.Status.WAITING_ASSIGNMENT,
-                    amount=serializer.validated_data['amount'],
-                    external_user_id=serializer.validated_data['external_id'],
-                    target_iban=serializer.validated_data['customer_iban'],
-                    target_name=serializer.validated_data['customer_name']
-                )
+                from django.db import transaction
+                from django.db.models import Q
+
+                # Atomic block to prevent race conditions
+                with transaction.atomic():
+                    # Check for existing PENDING transactions for this user
+                    # Note: We cannot check IP on Transaction model as it doesn't exist there.
+                    # We rely on external_user_id for concurrency check for now.
+                    if Transaction.objects.select_for_update().filter(
+                        external_user_id=external_id_val, 
+                        status__in=[Transaction.Status.PENDING, Transaction.Status.WAITING_ASSIGNMENT]
+                    ).exists():
+                         return Response(
+                             {"error": "Zaten bekleyen bir işleminiz var. Lütfen sonuçlanmasını bekleyin."}, 
+                             status=status.HTTP_409_CONFLICT
+                         )
+
+                    txn = Transaction.objects.create(
+                        sub_dealer=None,
+                        transaction_type=Transaction.TransactionType.WITHDRAW,
+                        status=Transaction.Status.WAITING_ASSIGNMENT,
+                        amount=serializer.validated_data['amount'],
+                        external_user_id=external_id_val,
+                        target_iban=serializer.validated_data['customer_iban'],
+                        target_name=serializer.validated_data['customer_name']
+                    )
                 
                 # Push Notification (To Admin)
                 send_notification('admin-channel', 'new-transaction', {
@@ -62,60 +98,92 @@ class CreateWithdrawalAPIView(APIView):
     # For now, I'll keep it but the new 'Pool' one is primary.
     ...
 
+from finance.api.authentication import CsrfExemptSessionAuthentication
+from rest_framework.authentication import BasicAuthentication
+
 class DepositRequestAPIView(APIView):
-    authentication_classes = []
+    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
     permission_classes = [IsAuthenticatedClient]
+    throttle_scope = 'deposit'
 
     def post(self, request, format=None):
         from .api_serializers import DepositRequestSerializer
-        from finance.models import BankAccount, Transaction
+        from finance.models import BankAccount, Transaction, Blacklist
+        from .utils import is_blacklisted, get_client_ip
+        # from .models import Blacklist # DEPRECATED
         import random
+
+        # Blacklist Checks
+        client_ip = get_client_ip(request)
+        if is_blacklisted(client_ip, Blacklist.BlacklistType.IP):
+             return Response({"error": "Erişim engellendi (IP)."}, status=status.HTTP_403_FORBIDDEN)
+        
+        user_id = request.data.get('user_id')
+        if user_id and is_blacklisted(user_id, Blacklist.BlacklistType.USER_ID):
+             return Response({"error": "Hesabınız kısıtlanmıştır."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = DepositRequestSerializer(data=request.data)
         if serializer.is_valid():
             amount = serializer.validated_data['amount']
             full_name = serializer.validated_data['full_name']
-            user_id = serializer.validated_data['user_id']
+            user_id_val = serializer.validated_data['user_id']
 
-            # 1. Find eligible accounts
-            # Filter by account limits and dealer status
-            candidates = BankAccount.objects.filter(
-                is_active=True,
-                min_deposit_limit__lte=amount,
-                max_deposit_limit__gte=amount,
-                sub_dealer__is_active_by_system=True
-            ).select_related('sub_dealer')
+            from django.db import transaction
             
-            # 2. Check Dealer Balance Limits (Post-DB filter for calculation)
-            valid_accounts = []
-            for acc in candidates:
-                # Check if adding this amount exceeds the dealer's limit
-                # Note: current_net_balance is updated only on APPROVED. 
-                # But we should consider Pending deposits too to be safe? 
-                # For now, simplest check on current balance.
-                if acc.sub_dealer.current_net_balance + amount <= acc.sub_dealer.net_balance_limit:
-                    valid_accounts.append(acc)
-            
-            if not valid_accounts:
-                return Response(
-                    {"error": "Uygun hesap bulunamadı (Limitler dolu veya limit dışı miktar)."}, 
-                    status=status.HTTP_404_NOT_FOUND
+            # Atomic block start
+            with transaction.atomic():
+                # Check concurrency
+                # Lock rows to be safe
+                if Transaction.objects.select_for_update().filter(
+                    external_user_id=user_id_val, 
+                    status=Transaction.Status.PENDING,
+                    transaction_type=Transaction.TransactionType.DEPOSIT
+                ).exists():
+                     return Response(
+                         {"error": "Zaten bekleyen bir yatırım işleminiz var."}, 
+                         status=status.HTTP_409_CONFLICT
+                     )
+
+                # 1. Find eligible accounts
+                # Filter by account limits and dealer status
+                candidates = BankAccount.objects.filter(
+                    is_active=True,
+                    min_deposit_limit__lte=amount,
+                    max_deposit_limit__gte=amount,
+                    sub_dealer__is_active_by_system=True,
+                    sub_dealer__user__is_active=True  # Ensure User is globally active
+                ).select_related('sub_dealer')
+                
+                # 2. Check Dealer Balance Limits (Post-DB filter for calculation)
+                valid_accounts = []
+                for acc in candidates:
+                    # Check if adding this amount exceeds the dealer's limit
+                    # Note: current_net_balance is updated only on APPROVED. 
+                    # But we should consider Pending deposits too to be safe? 
+                    # For now, simplest check on current balance.
+                    if acc.sub_dealer.current_net_balance + amount <= acc.sub_dealer.net_balance_limit:
+                        valid_accounts.append(acc)
+                
+                if not valid_accounts:
+                    return Response(
+                        {"error": "Uygun hesap bulunamadı (Limitler dolu veya limit dışı miktar)."}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # 3. Select one
+                selected_account = random.choice(valid_accounts)
+
+                # 4. Create Transaction (INITIATED)
+                txn = Transaction.objects.create(
+                    sub_dealer=selected_account.sub_dealer,
+                    bank_account=selected_account,
+                    transaction_type=Transaction.TransactionType.DEPOSIT,
+                    status=Transaction.Status.PENDING,
+                    amount=amount,
+                    external_user_id=user_id_val,
+                    sender_full_name=full_name,
+                    description=f"Depositor: {full_name}"
                 )
-
-            # 3. Select one
-            selected_account = random.choice(valid_accounts)
-
-            # 4. Create Transaction (INITIATED)
-            txn = Transaction.objects.create(
-                sub_dealer=selected_account.sub_dealer,
-                bank_account=selected_account,
-                transaction_type=Transaction.TransactionType.DEPOSIT,
-                status=Transaction.Status.PENDING,
-                amount=amount,
-                external_user_id=user_id,
-                sender_full_name=full_name,
-                description=f"Depositor: {full_name}"
-            )
 
             # Push Notifications
             payload = {

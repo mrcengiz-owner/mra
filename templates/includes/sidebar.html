@@ -35,8 +35,25 @@
     <li class="menu-header small text-uppercase text-muted px-4 py-2 mt-3" style="font-size: 0.75rem; letter-spacing: 1px;">Yönetici Ayarları</li>
 
     <li>
+        <a href="{% url 'admin-all-banks' %}" class="{% if 'all-bank-accounts' in request.path %}active{% endif %}">
+            <i class="fas fa-university"></i> <span>Banka Yönetimi</span>
+        </a>
+    </li>
+    
+    <li>
+        <a href="{% url 'custom_blacklist' %}" class="{% if 'blacklist' in request.path %}active{% endif %}">
+            <i class="fas fa-ban"></i> <span>Kara Liste</span>
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'admin-all-dealers' %}" class="{% if 'all-dealers' in request.path %}active{% endif %}">
+            <i class="fas fa-users-cog"></i> <span>Sahalar / Bayiler</span>
+        </a>
+    </li>
+
+    <li>
         <a href="{% url 'global-settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
-            <i class="fas fa-cogs"></i> <span>Genel Ayarlar</span>
+            <i class="fas fa-cogs"></i> <span>Sistem Ayarları</span>
         </a>
     </li>
     <li>

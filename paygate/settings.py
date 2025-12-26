@@ -326,3 +326,20 @@ SESSION_COOKIE_AGE = 1209600 # 2 hafta
 TWO_FACTOR_TOTP_DIGITS = 6
 OTP_TOTP_SYNC = True
 OTP_TOTP_WINDOW = 3 # Zaman kayması toleransı
+
+# ==========================================
+# PRODUCTION & PROXY SETTINGS
+# ==========================================
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CSRF Trusted Origins (Hardcoded for clarity per request + Environment)
+env_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    'https://nexkasa.com',
+    'https://www.nexkasa.com',
+    'http://localhost',
+    'http://127.0.0.1',
+] + [url for url in env_origins if url]
+
+# Static API Key for Public Endpoints
+MY_SECRET_API_KEY = 'a78c75e4899fb3026135a373bde44c36dabd1bb7012a6fc190c3d8'

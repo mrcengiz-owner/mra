@@ -103,7 +103,7 @@ from rest_framework.authentication import BasicAuthentication
 
 class DepositRequestAPIView(APIView):
     authentication_classes = [ApiKeyAuthentication]
-    permission_classes = [IsAuthenticatedClient]
+    permission_classes = [] # Removed IP check to rely on Static Key only
     throttle_scope = 'deposit'
 
     def post(self, request, format=None):

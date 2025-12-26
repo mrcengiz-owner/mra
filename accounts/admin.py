@@ -43,6 +43,12 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('Role Info', {'fields': ('role',)}),
     )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'role'),
+        }),
+    )
     actions = ['reset_2fa_device']
 
     @admin.action(description="2FA Cihazını Sıfırla (Reset 2FA)")

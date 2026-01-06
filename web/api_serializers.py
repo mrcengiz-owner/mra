@@ -17,6 +17,7 @@ class DepositRequestSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=255)
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     user_id = serializers.CharField(max_length=100)
+    external_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
     callback_url = serializers.URLField(required=False, allow_blank=True)
 
     def validate_amount(self, value):

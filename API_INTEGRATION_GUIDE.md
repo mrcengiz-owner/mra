@@ -34,6 +34,7 @@ Kullanıcılarınızın sisteme para yatırma talebi oluşturması için kullan�
 | `amount` | Decimal/String | **Evet** | Yatırılacak tutar (Örn: `"1500.00"`). |
 | `full_name` | String | **Evet** | Gönderici Ad Soyad. |
 | `user_id` | String | **Evet** | Sizin sisteminizdeki Kullanıcı ID (Unique ID). |
+| `external_id` | String | **Hayır** | Sizin sisteminizdeki benzersiz İşlem ID'si (Opsiyonel). |
 | `callback_url`| URL | Hayır | İşlem sonucunun bildirileceği Webhook URL'i. |
 
 *   **Örnek JSON Request:**
@@ -42,16 +43,22 @@ Kullanıcılarınızın sisteme para yatırma talebi oluşturması için kullan�
   "amount": "1500.00",
   "full_name": "Ahmet Yılmaz",
   "user_id": "USER_ID_12345",
+  "external_id": "TXN_ABC_123",
   "callback_url": "https://sizin-siteniz.com/api/callback"
 }
 ```
 
-*   **Başarılı Yanıt (HTTP 200/201):**
+*   **Başarılı Yanıt (HTTP 201 Created):**
 ```json
 {
-    "status": "success",
-    "transaction_id": 105,
-    "message": "Deposit request received."
+  "status": "success",
+  "transaction_token": "8852e690-...",
+  "external_id": "TXN_ABC_123",
+  "banka_bilgileri": {
+      "banka_adi": "Ziraat Bankasi",
+      "alici_adi": "Mert Cengiz",
+      "iban": "TR6600062000000129995678901"
+  }
 }
 ```
 
@@ -77,7 +84,7 @@ Kullanıcının bakiyesini IBAN'a çekmesi için kullanılır.
   "customer_iban": "TR120006200000012345678901",
   "customer_name": "Mehmet Demir",
   "external_id": "TXN_998877",
-  "callback_url": "https://sizin-siteniz.com/api/callback"
+  "callback_url": "https://site.com/payout-webhook"
 }
 ```
 
@@ -94,7 +101,7 @@ Bir işlemin durumu (Onay/Ret) değiştiğinde, isteği gönderirken belirttiği
 {
   "transaction_id": 105,        // NexKasa Sistem ID'si
   "status": "APPROVED",         // Durum: APPROVED veya REJECTED
-  "external_id": "USER_ID_12345", // Sizin gönderdiğiniz ID (user_id veya external_id)
+  "external_id": "TXN_ABC_123", // Sizin gönderdiğiniz ID (Yoksa user_id dönebilir)
   "amount": "1500.00",
   "type": "DEPOSIT"             // DEPOSIT veya WITHDRAW
 }
@@ -103,17 +110,18 @@ Bir işlemin durumu (Onay/Ret) değiştiğinde, isteği gönderirken belirttiği
 ### Status Değerleri:
 *   `APPROVED`: İşlem onaylandı, bakiye güncellendi/para gönderildi.
 *   `REJECTED`: İşlem iptal edildi veya reddedildi.
-*   `WAITING_ASSIGNMENT`: (Sadece Withdraw) İşlem havuzda bekliyor (Opsiyonel bildirim).
+*   `WAITING_ASSIGNMENT`: (Sadece Withdraw) İşlem havuzda bekliyor.
 
 ### Önemli Notlar:
-1.  **Response:** Callback isteğini aldığınızda sunucunuz `200 OK` HTTP kodu dönmelidir. Aksi takdirde (örn: 500 hatası) sistem isteği tekrar göndermeyi deneyebilir (Retry mekanizması varsa).
-2.  **Güvenlik:** Callback isteğinin NexKasa sunucusundan geldiğini doğrulamak için IP kontrolü yapabilir veya URL'nize gizli bir token (query param) ekleyebilirsiniz (Örn: `?token=SECRET`).
+1.  **Response:** Callback isteğini aldığınızda sunucunuz `200 OK` HTTP kodu dönmelidir.
+2.  **Güvenlik:** Callback isteğinin NexKasa sunucusundan geldiğini doğrulamak için IP kontrolü yapabilirsiniz.
 
 ---
 
 ## 5. Hata Kodları (HTTP Status)
-*   `200 OK`: İşlem Başarılı.
+*   `200 OK` / `201 Created`: İşlem Başarılı.
 *   `400 Bad Request`: Eksik veya hatalı parametre.
 *   `403 Forbidden`: Geçersiz API Key veya IP kısıtlaması.
-*   `409 Conflict`: Mükerrer işlem (Aynı ID ile bekleyen işlem varsa).
+*   `404 Not Found`: Uygun banka bulunamadı (Limit/Kota gibi nedenlerle).
+*   `409 Conflict`: Mükerrer işlem (Aynı ID/Kullanıcı ile bekleyen işlem varsa).
 *   `500 Internal Server Error`: Sunucu hatası.

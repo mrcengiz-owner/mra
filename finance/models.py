@@ -97,6 +97,7 @@ class Transaction(models.Model):
     target_iban = models.CharField(max_length=34, null=True, blank=True, help_text="Target IBAN for withdrawals", verbose_name="Hedef IBAN")
     target_name = models.CharField(max_length=255, null=True, blank=True, help_text="Target Account Holder Name", verbose_name="Hedef Ad Soyad")
     external_user_id = models.CharField(max_length=100, help_text="User ID from external system", verbose_name="Harici Kullanıcı ID")
+    external_id = models.CharField(max_length=100, null=True, blank=True, help_text="Transaction ID from external system", verbose_name="Harici İşlem ID")
     api_client = models.ForeignKey('accounts.APIClient', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="API İstemcisi")
     callback_url = models.URLField(max_length=500, null=True, blank=True, verbose_name="Callback URL", help_text="Notification URL for status updates")
     sender_full_name = models.CharField(max_length=255, null=True, blank=True, verbose_name="Gönderen Adı Soyadı")

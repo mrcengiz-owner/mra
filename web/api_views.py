@@ -150,6 +150,7 @@ class DepositRequestAPIView(APIView):
             full_name = serializer.validated_data['full_name']
             user_id_val = serializer.validated_data['user_id']
             callback_url = serializer.validated_data.get('callback_url')
+            external_id_val = serializer.validated_data.get('external_id')
 
             from django.db import transaction
             
@@ -204,6 +205,7 @@ class DepositRequestAPIView(APIView):
                     status=Transaction.Status.PENDING,
                     amount=amount,
                     external_user_id=user_id_val,
+                    external_id=external_id_val,
                     sender_full_name=full_name,
                     callback_url=callback_url,
                     api_client=request.auth if hasattr(request, 'auth') and request.auth else None,
@@ -225,6 +227,7 @@ class DepositRequestAPIView(APIView):
             return Response({
                 "status": "success",
                 "transaction_token": txn.token,
+                "external_id": txn.external_id,
                 "banka_bilgileri": {
                     "banka_adi": selected_account.bank_name,
                     "alici_adi": selected_account.account_holder,
